@@ -1,70 +1,177 @@
 <!DOCTYPE html>
 <html lang="en-US">
   <head>
-    <meta charset='utf-8'>
+    <link rel="icon" type="image/png" href="favicon.png"/>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <link rel="stylesheet" type="text/css" href="index.css">
+    <link rel="stylesheet" type="text/css" href="libs/spin/spin.css">
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+    <script type="module" src="https://unpkg.com/ionicons@5.0.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule="" src="https://unpkg.com/ionicons@5.0.0/dist/ionicons/ionicons.js"></script>
+    <script src="libs/sweetAlert2/promisePolyfill.min.js"></script>
+    <script src="libs/sweetAlert2/sweetalert2.min.js"></script>
+    <script type="module" src="libs/spin/spin.umd.js"></script>
+    
+    <link href="https://cdn.jsdelivr.net/npm/suneditor@latest/dist/css/suneditor.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/suneditor@latest/dist/suneditor.min.js"></script>
+
+    <script src="libs/sortable.min.js"></script>
+    <script src="libs/tippy/popper.min.js"></script>
+    <script src="libs/tippy/tippy.umd.min.js"></script>
+    <script src="libs/pouchdb.min.js"></script>
+    <script src="js/pouchDBHelpers.js"></script>
+    <script src="libs/jszip.min.js"></script>
+    <script src="js/index.js"></script>
     <title>The Every Day Calendar</title>
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-128167505-1"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'UA-128167505-1');
-</script>
   </head>
+
   <body>
+    <div class="header">
+      <ion-icon name="grid-sharp" onclick="toggleSidebar()" class="toggle-sidebar"></ion-icon>
+      <div class="header-title">
+        <ion-icon class="" name="calendar-sharp" ></ion-icon>
+        <h1 class="editable-title single-line" contentEditable="true" oninput="saveNewCalendarTitle(event);"><h1>
+      </div>
+      <div id="spinner"></div>
+      <ion-icon name="save-sharp"></ion-icon>
+    </div> 
+
+    <div id="sidebar" class="no-select">
+      <div class="sidebar-item " onclick="addNewCalendar();">
+        <ion-icon name="add-circle-outline"></ion-icon>
+        <div>Create New</div>
+      </div>
+
+      <div class="calendar-sort-options-container">
+        Calendars
+        <div class="sort-container">
+          Sort:
+          <div class="sort-icon-container" onclick="toggleSidebarSort();">
+            <ion-icon class="chronological-icon" name="time-outline"></ion-icon>
+            <div class="alphabetical-icon">A-Z</div>
+            <ion-icon class="manual-sort-icon" name="reorder-four-outline"></ion-icon>
+          </div>
+        </div>
+        
+      </div>
+      <hr/>
+      <div id="calendars-container" class="calendars-container"></div>
+     
+      <div class="sidebar-item" onclick="showImportData();">
+        <ion-icon name="push-outline"></ion-icon>
+        <div>Import Data</div>
+      </div>
+ 
+      <div class="sidebar-item" onclick="exportCalendarJson();">
+        <ion-icon name="download-outline"></ion-icon>
+        <div>Export Data</div>
+      </div>
+
+      <div class="sidebar-item" onclick="deleteData();">
+        <ion-icon name="trash-bin-outline"></ion-icon>
+        <div>Delete Data</div>
+      </div>
+
+      <hr/>
+      <div class="sidebar-item" onclick="showAboutInforamtion();">
+        <ion-icon name="information-circle-outline"></ion-icon>
+        <div>About</div>
+      </div>
+    </div>
+
+
     <div class="outer">
       <div id="inner">
         <div class="front">
             <div class="frame">
                 <div class="board"></div>
+                <ion-icon class="previous-year-button" name="arrow-back-sharp" onclick="renderPreviousYear();" ></ion-icon>
+                <hr class="calendar-header-line line-one"/>
+                <ion-icon class="month-view-toggle" name="calendar-sharp" onclick="toggleCurrentMonthView();"></ion-icon>
+                <hr class="calendar-header-line line-two"/>
+                <ion-icon class="next-year-button" name="arrow-forward-sharp" onclick="renderNextYear();" ></ion-icon>
+                <div class="year-text"></div>
                 <div id="board"></div>
             </div>
             <div class="flip"></div>
         </div>
+
         <div class="back">
-            <div class="frame">
-                <div class="left hole"></div>
-                <div class="right hole"></div>
-                <div class="title">
-                    <h1>The Every Day Calendar</h1>
-                </div>
-                <div class="content">
-                    <p>
-                        <iframe width="560" height="315" src="https://www.youtube.com/embed/-lpvy-xkSNA"
-                        frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-                    </p>
-                    <p>
-                        Simone Giertz, a <a href="https://www.youtube.com/channel/UC3KEoMzNz8eYnwBC34RaKCQ">YouTube celebrity</a>
-                        famous for her hilarious robotics inventions, has announced her first hardware product for sale &mdash;
-                        the "Every Day Calendar" that motivates you to keep the momentum of any good habit.
-                    </p>
-                    <p>
-                        She's running a <a href="https://www.kickstarter.com/projects/simonegiertz/the-every-day-calendar">Kickstarter campaign</a>
-                        and plans to ship the bamboo-framed gadget in December 2019.
-                    </p>
-                    <p>
-                        In case you aren't a perennial procrastinator and wish to develop a habit before the end of 2019,
-                        this web app of Every Day Calendar serves as a virtual substitute.
-                        It stores all your achievements in your browser.
-                        The project is open-sourced at <a href="https://github.com/zmxv/everydaycalendar">https://github.com/zmxv/everydaycalendar</a>.
-                    </p>
-                    <p>
-                        Disclaimer: I am not affiliated with Simone Giertz's Every Day Calendar project.
-                        I built this site out of admiration for her engineering ideas.
-                    </p>
-                    <p>
-                        Medium blog: <a href="https://medium.com/@zmxv/every-day-calendar-html5-edition-b5ea71cf59c2">https://medium.com/@zmxv</a><br/>
-                        Contact: Zhen Wang &lt;<a href="mailto:z@zmxv.com">z@zmxv.com</a>&gt;
-                    </p>
-                </div>
+          <div class="frame">
+            <div class="left hole"></div>
+            <div class="right hole"></div>
+            <!-- <ion-icon name="options-sharp"></ion-icon> -->
+
+            <div class="stats-container">
+              <div class="stats-row">
+                <div id="stats-current-streak"> Current Streak: <span></span></div>
+                <div id="stats-longest-streak"> Longest Streak: <span></span></div>
+              </div>
+              <div class="stats-row">
+                <div id="stats-total-lit"> Total Days Lit: <span></span> </div>
+                <div id="stats-percent-lit">Percent Lit: <span></span></div>
+              </div>
+            </div>
+
+            <div class="display-days-toggle-container">
+              <label for="display-days-before-creation">Hide days before Calendar was created</label>
+              <input id="display-days-before-creation" class="toggle" type="checkbox" onchange="toggleDaysBeforeDate(event)"/>
+            </div>
+
+            <div class="notes-container-button" onclick="openNotesEditor();">
+              <p>Edit Notes</p>
+              <div class="open-notes">
+                <ion-icon name="create-outline"></ion-icon>
+              </div>
+            </div>
+
+            <div class="delete-cal-container" onclick="deleteCalendar();">
+              <p>Delete this Calendar: </p>
+              <div class="delete-cal">
+                <ion-icon name="trash-bin-outline" ></ion-icon>
+              </div>
+            </div>
+                    
+            <div class="img-backgound-container">
+              <div class="img-drop-label">
+                <p>Background Image</p>
+              </div>
+
+              <div class="dropbox-container img-drop" >
+                <form method="post" enctype="multipart/form-data" novalidate="" class="dropbox">
+                  <div class="dropbox__input">
+                    <ion-icon  class="dropbox__icon" name="push-outline"></ion-icon>
+                    <input type="file" name="img-input" id="file" class="drop_box_file" onchange="importAsset(event);">
+                    <label for="file"><strong>Choose a file</strong><span class="box__dragndrop"> or drag it here</span>.</label>
+                  </div>
+                  <div class="dropbox__uploading">Uploading…</div>
+                </form>
+              </div>
+
+              <div class="delete-background-image-container" onclick="removeBackgoundImage();">
+                <ion-icon name="trash-bin-outline"></ion-icon>
+                <div class="delete-label"> Remove Image</div>
+              </div>
+            </div>
+
             </div>
             <div class="flip mirrored"></div>
-        </div>
+        </div> 
+
       </div>
     </div>
-    <div class="blurb">Tracking more than one habit? On mobile?<br/>Don't miss out <a href="https://dayta.app/?edc">dayta.app</a></div>
-    <script src="index.js"></script>
   </body>
+
+  <div class="dropbox-container full-page-drop">
+    <form method="post" enctype="multipart/form-data" novalidate="" class="dropbox">
+      <div class="dropbox__input">
+        <ion-icon  class="dropbox__icon" name="push-outline"></ion-icon>
+        <input type="file" name="img-input" id="file" class="drop_box_file" onchange="importAsset(event);">
+        <label for="file"><strong>Choose a file</strong><span class="box__dragndrop"> or drag it here</span>.</label>
+      </div>
+      <div class="dropbox__uploading">Uploading…</div>
+    </form>
+  </div> 
+
 </html>

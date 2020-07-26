@@ -1,0 +1,39 @@
+// out:../css/index.css, compress: true, strictMath: true, sourceMap: true
+/*# sourceMappingURL=../css/index.css.map */
+
+@sidbar-bg: hsl(220,  13%, 18%); 
+@greyish-color: #3c3c3c;
+@title-color: #0066b8;
+@lighter-title-color: #5cb6ff;
+
+@import "basic.less";
+@import "header.less";
+@import "sidebar.less";
+@import "calendarBoard.less";
+@import "switchToggle.less";
+@import "dropUploadBox.less";
+
+body{
+    font-family: 'Helvetica Neue', Helvetica, Arial, serif;
+    font-size: 1em;
+    line-height: 1.5;
+    color: #333;
+    background: #7CCBC4;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.editor-swal-height{
+    .se-resizing-bar{ cursor: default !important; }
+    strong{ font-weight:bold; }
+}
+
+.about-info{
+    p{
+        margin-bottom: 16px;
+        text-align: left;
+        iframe{
+            margin: 16px auto 0;
+        }
+    }
+}

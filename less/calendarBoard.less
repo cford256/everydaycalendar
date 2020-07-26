@@ -1,0 +1,340 @@
+// main: index.less
+
+.outer{
+    width: 618px;
+    height: 1000px;
+    margin: 90px auto 180px;
+    position: relative;
+    perspective: 3000px;
+
+    #inner{
+        position: relative;
+        transform-style: preserve-3d;
+        transition: .3s ease-out;
+    
+        .front, .back {
+            width: 618px;
+            height: 1000px;
+            backface-visibility: hidden;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+        
+        .front{ z-index: 1; }
+        
+        .back {
+            transform: rotateY(180deg);
+            z-index: 2;
+        }
+    
+        .frame{
+            width: 618px;
+            height: 1000px;
+            background-image: url("frame.jpg");
+            background-size: contain;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .8);
+            position: absolute;
+            left: 0;
+            top: 0;
+        
+            .board{
+                position: absolute;
+                width: 590px;
+                height: 972px;
+                top: 14px;
+                left: 14px;
+                background: #151515;
+            }
+                
+            ion-icon[name="today-sharp"],
+            ion-icon[name="calendar-sharp"],
+            ion-icon[name="arrow-back-sharp"],
+            ion-icon[name="arrow-forward-sharp"]{
+                cursor: pointer;
+                color: #a39a6e; 
+                position: absolute;
+            
+                &.month-view-toggle{
+                    left: 298px;
+                    top: 17px;
+                    width: 20px;
+                    height: 20px;
+                }
+        
+                &.previous-year-button{
+                    left: 54px;
+                    top: 31px;
+                    width: 20px;
+                    height: 20px;
+                }
+        
+                &.next-year-button{
+                    left: 548px;
+                    top: 31px;
+                    width: 20px;
+                    height: 20px;
+                }
+        
+                &:hover{ color: #ffffc5; }
+            }
+        
+            .calendar-header-line{
+                border: none;
+                height: 2px;
+                color: #a39a6e; 
+                background-color:#a39a6e; 
+                position: absolute;
+                &.line-one{
+                    width: 210px;
+                    left: 77px;
+                    top: 32px;
+                }
+                &.line-two{
+                    width: 220px;
+                    left: 325px;
+                    top: 32px;
+                }
+            }
+            
+            .year-text{
+                position: absolute;
+                left: 294px;
+                top: 40px;
+                color: #a39a6e;
+                font-size: 12px;
+            }
+        
+            #board{
+                position: absolute;
+                top: 0;
+                left: 0;
+            
+                .lit, .dim, .dots, .bolt, .mon, .hole{
+                    position: absolute;
+                    background-image: url("sprite.png");
+                }
+            
+                .lit, .dim{
+                    width: 36px;
+                    height: 28px;
+                    text-align: center;
+                    font-size: 15px;
+                    line-height: 28px;
+                    user-select: none;
+                }
+                
+                .lit{
+                    cursor: pointer;
+                    color: #ffffc5;
+                    text-shadow: 0 1px 1px rgba(255, 255, 255, .5);
+                    transition: opacity .3s ease-out;
+                }
+                
+                .dim{
+                    background-position-y: -28px;
+                    color: #7b6f4f;
+                    text-shadow: 0 1px 1px rgba(255, 255, 255, .5);
+                }
+                
+                .dots{
+                    width: 36px;
+                    height: 10px;
+                    background-position-y: -56px;
+                }
+                
+                .bolt{
+                    width: 14px;
+                    height: 14px;
+                    background-position-y: -66px;
+                }
+                
+                .mon{
+                    cursor: pointer;
+                    width: 36px;
+                    height: 24px;
+        
+                    &.month-view-inactive-month{
+                        border: none;
+                        background-repeat: no-repeat;
+                        background-position-x: 4px;
+                        padding: 10px 22px;
+                        border-bottom: solid 1px #ffffc5;
+                    }
+                    
+                    &.month-view-active-month{
+                        border: none;
+                        background-repeat: no-repeat;
+                        background-position-x: 4px;
+                        padding: 10px 21px;
+                        border-left: solid 1px #ffffc5;
+                        border-top: solid 1px #ffffc5;
+                        border-right: solid 1px #ffffc5;
+                    } 
+                }
+              
+                .weekday-label{
+                    color: #ffffc5;    
+                    position: absolute;
+                    font-size: 25px;
+                    display: none;
+                }
+            }
+        
+            &.month-view{
+                #board{
+                    .weekday-label{
+                        display: block;
+                    }
+                }
+            }
+        
+            &.hide-days-before-creation{
+                .before-creation{ display: none; }
+        
+                .mon{
+                    &.before-creation{
+                        pointer-events: none;
+                        cursor: default;
+                        opacity: 0.5;
+                        display: block;
+                    }
+                }
+        
+                .previous-year-button{
+                    pointer-events: none;
+                    cursor: default;
+                    opacity: 0.5;
+                }
+            }
+        
+            .hole{
+                position: absolute;
+                background-image: url("sprite.png");
+                width: 36px;
+                height: 52px;
+                background-position-y: -404px;
+                top: 91px;
+                &.left{left: 171px;}
+                &.right{left: 411px;}
+            }
+                     
+            .stats-container{
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                position: absolute;
+                top: 200px;
+                width: 100%;
+            
+                .stats-row{
+                    display: flex;
+                    justify-content: space-between;
+                    margin: 0px 50px 50px 50px;
+                    font-weight: 500;
+                    font-size: large;
+            
+                    span{
+                        margin-left: 15px;
+                        font-weight: 700;
+                        color: @title-color;
+                    }
+                }
+            }
+            
+            .display-days-toggle-container{
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                // position: absolute;
+                margin-top: 330px; //45px;
+                font-size: 20px;
+                label{
+                    margin-right: 20px;
+                }
+            }
+            
+            .notes-container-button{
+                display: flex;
+                position: absolute;
+                top: 400px; 
+                left: 244px;
+                font-size: 20px;
+                p{margin-right: 15px;}
+            
+                .open-notes{
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    background: @title-color;
+                    border-radius: 30px;
+                    width: 35px;
+                    height: 35px;
+                    ion-icon[name="create-outline"]{
+                        width: 20px;
+                        height: 20px;
+                        align-self: center;
+                        color: black;
+                        padding-bottom: 2px;
+                    }
+                    &:hover{ 
+                        background-color: @lighter-title-color;
+                    }
+                }
+            }
+            
+            .delete-cal-container{
+                display: flex;
+                position: absolute;
+                top: 474px;
+                left: 199px;
+                font-size: 20px;
+                margin-top: 2px;
+                p{margin-right: 15px;}
+            
+                .delete-cal{
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    background: @title-color;
+                    border-radius: 30px;
+                    width: 35px;
+                    height: 35px;
+                    
+                    ion-icon[name="trash-bin-outline"]{
+                        width: 25px;
+                        height: 25px;
+                        align-self: center;
+                        color: black;
+                    }
+                    &:hover{ 
+                        background-color: @lighter-title-color;
+                    }
+                }
+            }
+        
+        }
+        
+        .flip{ // flip over icon by Nathan Smith from the Noun Project
+            background-image:  url("sprite.png");
+            background-repeat: no-repeat;
+            background-position-y: -368px;
+            width: 36px;
+            height: 36px;
+            background-color: @title-color;
+            border-radius: 5px;
+            padding: 20px 5px 5px 20px;
+            position: absolute;
+            left: 291px;
+            top: 1072px;
+            cursor: pointer; 
+        
+            &:hover{ background-color: @lighter-title-color; }
+            &.mirrored{ transform: scaleX(-1); }
+        }
+    
+        &.flipped{  transform: rotateY(180deg) }
+    }
+}
