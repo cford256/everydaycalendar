@@ -1,5 +1,7 @@
 # The Everyday Calendar
 
+[Demo](https://cford256.github.io/everydaycalendar/)
+
 A web app of Simone Giertz's Every Day Calendar gadget.
 
 This is a fork of an open-sourced project created by Zhen Wang located at https://github.com/zmxv/everydaycalendar. This fork was created by Cody Ford and aims to allow it's users to use multiple calendars, so they can work on forging multiple habits at the same time.
