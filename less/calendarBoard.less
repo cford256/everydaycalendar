@@ -3,15 +3,17 @@
 .outer{
     width: 618px;
     height: 1000px;
-    margin: 90px auto 180px;
+    // margin: 90px auto 180px;
+    top: 80px;
+    // margin: auto;
+    // margin-bottom: 150px;
     position: relative;
     perspective: 3000px;
 
     #inner{
-        position: relative;
-        transform-style: preserve-3d;
+       position: relative;
+       transform-style: preserve-3d;
         transition: .3s ease-out;
-    
         .front, .back {
             width: 618px;
             height: 1000px;
@@ -135,6 +137,18 @@
                     background-position-y: -28px;
                     color: #7b6f4f;
                     text-shadow: 0 1px 1px rgba(255, 255, 255, .5);
+
+
+                    // &.lit{
+                    //     background-position-y: 0px;   // TODO: test if this would be better.
+                    //     cursor: pointer;
+                    //     color: #ffffc5;
+                    //     text-shadow: 0 1px 1px rgba(255, 255, 255, .5);
+                    //   //  transition: opacity .3s ease-out;
+                    // }
+
+
+
                 }
                 
                 .dots{
@@ -180,18 +194,14 @@
                     display: none;
                 }
             }
-        
-            &.month-view{
-                #board{
-                    .weekday-label{
-                        display: block;
-                    }
-                }
-            }
-        
+
             &.hide-days-before-creation{
-                .before-creation{ display: none; }
-        
+                .before-creation{ 
+                  opacity: 0.3;  
+                  pointer-events: none;
+                  // display: none;
+                } 
+
                 .mon{
                     &.before-creation{
                         pointer-events: none;
@@ -205,6 +215,14 @@
                     pointer-events: none;
                     cursor: default;
                     opacity: 0.5;
+                }
+            }
+
+            &.month-view{
+                #board{
+                    .weekday-label{
+                        display: block;
+                    }
                 }
             }
         
@@ -328,7 +346,7 @@
             padding: 20px 5px 5px 20px;
             position: absolute;
             left: 291px;
-            top: 1072px;
+            top: 1042px;
             cursor: pointer; 
         
             &:hover{ background-color: @lighter-title-color; }

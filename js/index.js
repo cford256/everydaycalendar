@@ -8,6 +8,7 @@ var spinElement;
 var fullPageDropBox;
 var spinner;
 var editor;
+var sortingSidebar = false;
 var currentStreakDiv;
 var longestStreakSpan;
 var totalLitSpan;
@@ -83,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
     function loadCalendars(){
         db = getDB(dbName);
         dbGetDoc(db, "Config", defaultConfig).then(function(response){
-            config = typeof response._rev == "undefined" ? response : response.docContent;
+            config = typeof response._rev === "undefined" ? response : response.docContent;
             config.sidebarOpened ? sidebar.classList.add("opened") : sidebar.classList.remove("opened");
             config.flipped ? inner.className = "flipped" : inner.className = "";
 
@@ -120,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         saveConfig();    
         currentCalendarId = id;  
         creationDate = new Date(id.replace("Cal_", ""));
-        if(typeof currentCalendar != "undefined" && id == currentCalendar.id){ // This is being called from addNewCalendar. 
+        if(typeof currentCalendar !== "undefined" && id == currentCalendar.id){ // This is being called from addNewCalendar. 
             openCalendarSub();
         }else{ // need to get the calendar from the database. 
             dbGetDoc(db, id).then(function(res){               
@@ -183,11 +184,6 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
     /**************************************************************************************/
     function addMonthTooltips(){
         tippy(".mon", {content: 'View this Month'});
-    }
-
-    /**************************************************************************************/
-    function addSidebarCalendarTooltips(){
-        tippy(".drag-cal", {content: 'Drag and Drop to Rearrange the Order', placement: "right"});     
     }
 
 //#endregion
@@ -256,6 +252,9 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                 Sortable.create(calContainer, {
                     animation: 150,
                     handle: '.drag-cal',
+                    onStart: function(){
+                        sortingSidebar = true;
+                    },
                     onEnd: function(e){
                         sortContainer.classList.add("sort-manual");
                         config.sidebarSort = "manual";
@@ -265,9 +264,9 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                         })  
                         config.sidebarManualOrder = order;
                         saveConfig();
+                        sortingSidebar = false;
                     }
                 });
-                addSidebarCalendarTooltips();
                 return {"ok": true};
             })
         )
@@ -464,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         var el = document.querySelector(".editable-title");
         var range = document.createRange();
         var sel = window.getSelection();
-        if(typeof el.childNodes[0] != "undefined") range.setStart(el.childNodes[0], newPos);
+        if(typeof el.childNodes[0] !== "undefined") range.setStart(el.childNodes[0], newPos);
         range.collapse(true);
         sel.removeAllRanges();
         sel.addRange(range);
@@ -477,7 +476,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         var doc = element.ownerDocument || element.document;
         var win = doc.defaultView || doc.parentWindow;
         var sel;
-        if(typeof win.getSelection != "undefined"){
+        if(typeof win.getSelection !== "undefined"){
             sel = win.getSelection();
             if(sel.rangeCount > 0){
                 var range = win.getSelection().getRangeAt(0);
@@ -591,33 +590,39 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         while(date.getFullYear() == currentCalendar.lastYearViewed){ // loop though all the days of that year. 
             var mon = date.getMonth();
             var day = date.getDate()-1; // -1 so the math works out.
+            var weekday = date.getDay();
+            var time = date.getTime();
+
             var x = 49 + mon * 44;
             // cells start 82 px down from the top of the board. (giving room for the months titles. which start at 57 and take up 24 px so 81 px. )
             // and move 28 more px down for each day. (so day 1 is at 82 + 0 *28 px down.) since the day is decremented when this function is called. 
             var y = 82 + day * 28;
+
             // the dots are the third item in sprits.png they are in between the day hexicons. 
             if(day){ // stops it from adding dots for the first row 
                 var dots = addBoardElement("dots", x, y - 5); // -5 to move the dots to below the last day hexicon.    // not sure how it does not do it for the last day in the month yet.
                 dots.setAttribute("data-index", i); 
                 dots.setAttribute("data-year-pos", x+":"+(y-5));
+                if(time < creationTime) dots.classList.add("before-creation");
             }
+
             var dim = addBoardElement("dim", x, y);
             dim.innerHTML = day + 1; // set the contents of the created div to be day + 1 since the day had a -1 when it was called. 
+            dim.setAttribute("data-index", i);
+            dim.setAttribute("data-year-pos", x+":"+y);
+            dim.setAttribute("data-weekday", weekday);
+            dim.setAttribute("data-month", mon); 
+
             var lit = addBoardElement("lit", x, y); // add the lit icon on top of the dim icon.
             lit.style.opacity = 0; 
             lit.innerHTML = day + 1; 
-            dim.setAttribute("data-index", i);
             lit.setAttribute("data-index", i); 
-            dim.setAttribute("data-year-pos", x+":"+y);
             lit.setAttribute("data-year-pos", x+":"+y); 
-            var weekday = date.getDay();
-            dim.setAttribute("data-weekday", weekday);
             lit.setAttribute("data-weekday", weekday);
-            dim.setAttribute("data-month", mon); 
             lit.setAttribute("data-month", mon); 
 
-            var time = date.getTime();
-            if(day && time < creationTime) dots.classList.add("before-creation");
+            // TODO: see if it would be more effiecent to change the background image by adding lit class to div. 
+          
             if(time < dayBeforeCreation){ 
                 dim.classList.add("before-creation");
                 lit.classList.add("before-creation");
@@ -840,8 +845,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                 item.style.top = top + "px";
                 if(thisWeekday != 6 && item.classList.contains("lit")){ 
                     dots[dotIndex].classList.remove("hidden");
-                    dots[dotIndex].style.scale = 2;
-                    dots[dotIndex].style.transform = "rotate(90deg)";
+                    dots[dotIndex].style.transform = "rotate(90deg) scale(2)";
                     dots[dotIndex].style.top = top + 10 + "px";
                 }
 
@@ -851,10 +855,9 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
 
                 for(var i in weekdays){ // Position the dots and cells horizontally to match the day of the week that they are. 
                     if(i == lastCellWeekdayIndex){
-                        item.style.scale = 2;
+                        item.style.transform = "scale(2)";                        
                         var left = 58 + (i * 78);
                         item.style.left = left + "px";
-
                         if(thisWeekday != 6 && item.classList.contains("lit")){
                             dots[dotIndex].style.left = left + 40 + "px";
                             dotIndex++;
@@ -883,14 +886,8 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
             var positionArray = String(item.getAttribute("data-year-pos")).split(":");
             item.style.left = positionArray[0] + "px";
             item.style.top = positionArray[1] + "px";
-            item.style.scale = 1;
-            // item.style.transform = "";
-        });
-
-        document.querySelectorAll(".dots").forEach(function(item){  // Maybe more efficent to do this here verses above. 
             item.style.transform = "";
         });
-
         frame.classList.remove("month-view"); // Hides the day divs.
     }
 
@@ -1049,23 +1046,27 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
 
     /**************************************************************************************/
     function addDragAndDrop(){
-        var elem = document.body; //  document.querySelector(".dropbox");
+        var elem = document.body //  document.querySelector(".dropbox");
         addMultipleEvents(elem,  ["drag", "dragstart", "dragend", "dragover", "dragenter", "dragleave", "drop"], function(e){
-            if(!(typeof e.target != "undefined" && typeof e.target.classList != "undefined" && e.target.classList.contains("cal-div"))){
+            if(!(typeof e.target !== "undefined" && typeof e.target.classList !== "undefined" && e.target.classList.contains("cal-div"))){
                 e.preventDefault();
                 e.stopPropagation();
             }
         });
 
-        addMultipleEvents(elem,  ["dragover", "dragenter"], function(e){
+        var lastEnter;
+        addMultipleEvents(elem, ["dragover", "dragenter"], function(e){
             // Don't show the dropbox, so that the user can drop into sunEditor.
-            if(sunEditorClosed() && !(typeof e.target != "undefined" && typeof e.target.classList != "undefined" && e.target.classList.contains("cal-div")) ){
+            if(sunEditorClosed() && sortingSidebar != true ){
                 fullPageDropBox.classList.add('is-dragover');
+                lastEnter = e.target;
             }
         });
 
-        addMultipleEvents(elem,  ["dragleave", "dragend"], function(){ // "drop"
+        addMultipleEvents(elem,  ["dragleave", "dragend"], function(e){ // "drop"
+          if(e.target == lastEnter){
             fullPageDropBox.classList.remove('is-dragover');
+          }
         });
 
         elem.addEventListener("drop", function(e){
@@ -1168,7 +1169,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                     if(type == "base64"){
                         for(var j = 0; j < docs.length; j++){ // Find the doc that the attachment belongs to. 
                             if(docs[j]._id == docName){
-                                if(typeof docs[j]._attachments == "undefined") docs[j]._attachments = {};
+                                if(typeof docs[j]._attachments === "undefined") docs[j]._attachments = {};
                                 docs[j]._attachments[fileName] = {
                                     "content_type": guessImageMime(data),
                                     "data": data
@@ -1185,7 +1186,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                 }).then(function(){
                     return dbGetDoc(db, "Config", defaultConfig)
                 }).then(function(response){
-                    config = typeof response._rev == "undefined" ? response : response.docContent;
+                    config = typeof response._rev === "undefined" ? response : response.docContent;
                     config.sidebarOpened ? sidebar.classList.add("opened") : sidebar.classList.remove("opened");
                     config.flipped ? inner.className = "flipped" : inner.className = "";
                     openCalendar(config.lastCalendarOpened);
@@ -1207,7 +1208,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
 
     /**************************************************************************************/
     function sunEditorClosed(){
-        return typeof editor == "undefined" || typeof editor.core == "undefined";
+        return typeof editor === "undefined" || typeof editor.core === "undefined";
     }
 
     /**************************************************************************************/
@@ -1241,7 +1242,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
             showCloseButton: true,
             showConfirmButton: false,
         }).then(function(result){
-            if(typeof editor != "undefined") editor.destroy();
+            if(typeof editor !== "undefined") editor.destroy();
         });
         createHTMLTemplates();
         dbGetDoc(db, "Note_" + currentCalendar.id, {"not_found": true}, true).then(function(doc){ 

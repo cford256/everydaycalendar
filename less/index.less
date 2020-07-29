@@ -5,6 +5,7 @@
 @greyish-color: #3c3c3c;
 @title-color: #0066b8;
 @lighter-title-color: #5cb6ff;
+@header-height: 40px;
 
 @import "basic.less";
 @import "header.less";
@@ -12,6 +13,14 @@
 @import "calendarBoard.less";
 @import "switchToggle.less";
 @import "dropUploadBox.less";
+
+html,body{
+   height: 100vh;
+   min-height: 100vh;
+      width: 100vw;
+      min-width: 100vw;
+    position: fixed; // make the body not scrollable so the background image is more likely to fit.
+}
 
 body{
     font-family: 'Helvetica Neue', Helvetica, Arial, serif;
@@ -37,3 +46,22 @@ body{
         }
     }
 }
+
+
+
+.main-container{
+    position: absolute ;
+    height: 100vh;
+    min-height: 100vh;
+    width: 100vw;
+    min-width: 100vw;
+    top:0px;
+    overflow: auto; // Make this container scrollable rather than the body.
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    padding-bottom: 200px;
+    // align-items: center; // could center it in the page.
+}
+
+// could try to transform: scale(0.5); the outer container to make it fit on the screen size.

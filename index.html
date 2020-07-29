@@ -5,6 +5,7 @@
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" type="text/css" href="libs/spin/spin.css">
     <link rel="stylesheet" type="text/css" href="css/index.css">
     <script type="module" src="https://unpkg.com/ionicons@5.0.0/dist/ionicons/ionicons.esm.js"></script>
@@ -80,98 +81,104 @@
       </div>
     </div>
 
+    <div class="main-container"> 
 
-    <div class="outer">
-      <div id="inner">
-        <div class="front">
+      <div class="outer">
+        <div id="inner">
+          <div class="front">
+              <div class="frame">
+                  <div class="board"></div>
+                  <ion-icon class="previous-year-button" name="arrow-back-sharp" onclick="renderPreviousYear();" ></ion-icon>
+                  <hr class="calendar-header-line line-one"/>
+                  <ion-icon class="month-view-toggle" name="calendar-sharp" onclick="toggleCurrentMonthView();"></ion-icon>
+                  <hr class="calendar-header-line line-two"/>
+                  <ion-icon class="next-year-button" name="arrow-forward-sharp" onclick="renderNextYear();" ></ion-icon>
+                  <div class="year-text"></div>
+                  <div id="board"></div>
+              </div>
+              <div class="flip"></div>
+          </div>
+
+          <div class="back">
             <div class="frame">
-                <div class="board"></div>
-                <ion-icon class="previous-year-button" name="arrow-back-sharp" onclick="renderPreviousYear();" ></ion-icon>
-                <hr class="calendar-header-line line-one"/>
-                <ion-icon class="month-view-toggle" name="calendar-sharp" onclick="toggleCurrentMonthView();"></ion-icon>
-                <hr class="calendar-header-line line-two"/>
-                <ion-icon class="next-year-button" name="arrow-forward-sharp" onclick="renderNextYear();" ></ion-icon>
-                <div class="year-text"></div>
-                <div id="board"></div>
-            </div>
-            <div class="flip"></div>
+              <div class="left hole"></div>
+              <div class="right hole"></div>
+              <!-- <ion-icon name="options-sharp"></ion-icon> -->
+
+              <div class="stats-container">
+                <div class="stats-row">
+                  <div id="stats-current-streak"> Current Streak: <span></span></div>
+                  <div id="stats-longest-streak"> Longest Streak: <span></span></div>
+                </div>
+                <div class="stats-row">
+                  <div id="stats-total-lit"> Total Days Lit: <span></span> </div>
+                  <div id="stats-percent-lit">Percent Lit: <span></span></div>
+                </div>
+              </div>
+
+              <div class="display-days-toggle-container">
+                <label for="display-days-before-creation">Hide days before Calendar was created</label>
+                <input id="display-days-before-creation" class="toggle" type="checkbox" onchange="toggleDaysBeforeDate(event)"/>
+              </div>
+
+              <div class="notes-container-button" onclick="openNotesEditor();">
+                <p>Edit Notes</p>
+                <div class="open-notes">
+                  <ion-icon name="create-outline"></ion-icon>
+                </div>
+              </div>
+
+              <div class="delete-cal-container" onclick="deleteCalendar();">
+                <p>Delete this Calendar: </p>
+                <div class="delete-cal">
+                  <ion-icon name="trash-bin-outline" ></ion-icon>
+                </div>
+              </div>
+                      
+              <div class="img-backgound-container">
+                <div class="img-drop-label">
+                  <p>Background Image</p>
+                </div>
+
+                <div class="dropbox-container img-drop" >
+                  <form method="post" enctype="multipart/form-data" novalidate="" class="dropbox">
+                    <div class="dropbox__input">
+                      <ion-icon  class="dropbox__icon" name="push-outline"></ion-icon>
+                      <input type="file" name="img-input" id="file" class="drop_box_file" onchange="importAsset(event);">
+                      <label for="file"><strong>Choose a file</strong><span class="box__dragndrop"> or drag it here</span>.</label>
+                    </div>
+                    <div class="dropbox__uploading">Uploading…</div>
+                  </form>
+                </div>
+
+                <div class="delete-background-image-container" onclick="removeBackgoundImage();">
+                  <ion-icon name="trash-bin-outline"></ion-icon>
+                  <div class="delete-label"> Remove Image</div>
+                </div>
+              </div>
+
+              </div>
+              <div class="flip mirrored"></div>
+          </div> 
+
         </div>
-
-        <div class="back">
-          <div class="frame">
-            <div class="left hole"></div>
-            <div class="right hole"></div>
-            <!-- <ion-icon name="options-sharp"></ion-icon> -->
-
-            <div class="stats-container">
-              <div class="stats-row">
-                <div id="stats-current-streak"> Current Streak: <span></span></div>
-                <div id="stats-longest-streak"> Longest Streak: <span></span></div>
-              </div>
-              <div class="stats-row">
-                <div id="stats-total-lit"> Total Days Lit: <span></span> </div>
-                <div id="stats-percent-lit">Percent Lit: <span></span></div>
-              </div>
-            </div>
-
-            <div class="display-days-toggle-container">
-              <label for="display-days-before-creation">Hide days before Calendar was created</label>
-              <input id="display-days-before-creation" class="toggle" type="checkbox" onchange="toggleDaysBeforeDate(event)"/>
-            </div>
-
-            <div class="notes-container-button" onclick="openNotesEditor();">
-              <p>Edit Notes</p>
-              <div class="open-notes">
-                <ion-icon name="create-outline"></ion-icon>
-              </div>
-            </div>
-
-            <div class="delete-cal-container" onclick="deleteCalendar();">
-              <p>Delete this Calendar: </p>
-              <div class="delete-cal">
-                <ion-icon name="trash-bin-outline" ></ion-icon>
-              </div>
-            </div>
-                    
-            <div class="img-backgound-container">
-              <div class="img-drop-label">
-                <p>Background Image</p>
-              </div>
-
-              <div class="dropbox-container img-drop" >
-                <form method="post" enctype="multipart/form-data" novalidate="" class="dropbox">
-                  <div class="dropbox__input">
-                    <ion-icon  class="dropbox__icon" name="push-outline"></ion-icon>
-                    <input type="file" name="img-input" id="file" class="drop_box_file" onchange="importAsset(event);">
-                    <label for="file"><strong>Choose a file</strong><span class="box__dragndrop"> or drag it here</span>.</label>
-                  </div>
-                  <div class="dropbox__uploading">Uploading…</div>
-                </form>
-              </div>
-
-              <div class="delete-background-image-container" onclick="removeBackgoundImage();">
-                <ion-icon name="trash-bin-outline"></ion-icon>
-                <div class="delete-label"> Remove Image</div>
-              </div>
-            </div>
-
-            </div>
-            <div class="flip mirrored"></div>
-        </div> 
-
       </div>
-    </div>
+
+
+   </div>
+
+
+
+    <div class="dropbox-container full-page-drop">
+      <form method="post" enctype="multipart/form-data" novalidate="" class="dropbox">
+        <div class="dropbox__input">
+          <ion-icon  class="dropbox__icon" name="push-outline"></ion-icon>
+          <input type="file" name="img-input" id="file" class="drop_box_file" onchange="importAsset(event);">
+          <label for="file"><strong>Choose a file</strong><span class="box__dragndrop"> or drag it here</span>.</label>
+        </div>
+        <div class="dropbox__uploading">Uploading…</div>
+      </form>
+    </div> 
+
   </body>
-
-  <div class="dropbox-container full-page-drop">
-    <form method="post" enctype="multipart/form-data" novalidate="" class="dropbox">
-      <div class="dropbox__input">
-        <ion-icon  class="dropbox__icon" name="push-outline"></ion-icon>
-        <input type="file" name="img-input" id="file" class="drop_box_file" onchange="importAsset(event);">
-        <label for="file"><strong>Choose a file</strong><span class="box__dragndrop"> or drag it here</span>.</label>
-      </div>
-      <div class="dropbox__uploading">Uploading…</div>
-    </form>
-  </div> 
-
 </html>
