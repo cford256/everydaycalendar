@@ -112,12 +112,12 @@
                 top: 0;
                 left: 0;
             
-                .lit, .dim, .dots, .bolt, .mon, .hole{
+                .dim, .dots, .bolt, .mon, .hole{
                     position: absolute;
                     background-image: url("sprite.png");
                 }
             
-                .lit, .dim{
+                .dim{
                     width: 36px;
                     height: 28px;
                     text-align: center;
@@ -126,29 +126,28 @@
                     user-select: none;
                 }
                 
-                .lit{
-                    cursor: pointer;
-                    color: #ffffc5;
-                    text-shadow: 0 1px 1px rgba(255, 255, 255, .5);
-                    transition: opacity .3s ease-out;
-                }
-                
                 .dim{
                     background-position-y: -28px;
                     color: #7b6f4f;
                     text-shadow: 0 1px 1px rgba(255, 255, 255, .5);
-
-
-                    // &.lit{
-                    //     background-position-y: 0px;   // TODO: test if this would be better.
-                    //     cursor: pointer;
-                    //     color: #ffffc5;
-                    //     text-shadow: 0 1px 1px rgba(255, 255, 255, .5);
-                    //   //  transition: opacity .3s ease-out;
-                    // }
-
-
-
+                    &.lit{
+                        background-position-y: 0px;
+                        cursor: pointer;
+                        color: #ffffc5;
+                        text-shadow: 0 1px 1px rgba(255, 255, 255, .5);
+                        // transition: opacity .3s ease-out;
+                        // transition:   .3s ease-out;
+                        transition: lit-transition .9s;
+                        // animation: lit-transition .3s;
+                        @keyframes lit-transition {
+                            0%{
+                            opacity: 0.5; 
+                            }
+                            100% {
+                            opacity: 1;
+                            }
+                        }  
+                    }
                 }
                 
                 .dots{

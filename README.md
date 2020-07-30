@@ -6,14 +6,28 @@ This is a fork of an open-sourced project created by Zhen Wang located at https:
 
 Disclaimer: Zhen Wang is not affiliated with Simone Giertz's Every Day Calendar project. He built this site out of admiration for her engineering ideas. I am not affiliated with Zhen Wang or Simone Gietz.
 
+
+[demo](https://cford256.github.io/everydaycalendar/)
+
+[Changelog](changelog.md)
+
 ## To Do
 - There is a bug that seems to delete the calendar background image if you import the same image twice. 
-- combine the lit and dim divs to only use one div where the backgound postion-y changes instead of the opacity.  
-
+- 
+    ```
+    ** Change SunEditor image gallary to have all the images that are in any note or a calendar background.**
+    get all attachments, then create URL objects for them.
+    create an object to pass SunEditor for an image galery of the attachments.
+    then SunEditor will add that URL object to its content. 
+    Save the urls, then on save search the note for those urls and replace the URLs with refrences to the attachment that was added.
+    possilby even add it as a new attachment. 
+    would need to only add the uniqe images to the image gallary. The digest from pouchDB can be used for this.
+    ```
 
 ## Possible Future Changes
  
 - [ ] Make page responsive.
+- [ ] See about passing SunEditor a json file for the image galery that shows all the images in pouch db.
 
 - [ ] Change the month view to look and work better.
     - Could use a grid like a normal calendar. 

@@ -1,5 +1,20 @@
 # Changelog
 
+
+## [1.0.2]
+
+### Added
+- Changed the calendar backgounds to be from lorem picsum. So there is a lot more images that the background could randomly be set to. 
+
+### Changed
+- Removed all of the divs that were for displaying a day in it's lit up state. Now just adding a class to the dim divs that changes the background image to be of the lit state.
+    - Pro: Removes a lot of divs from the HTML.
+    - Con: There is no longer an opacity transition on the cells, that made it look like they were turning on. 
+- Reworked the dislpayMonthView function.
+
+### Fixed
+- Removed position fixed from the body, that was added in the last commit. It was causing an the background to not be displayed in firefox.
+
 ## [1.0.1]
 
 ### Changed

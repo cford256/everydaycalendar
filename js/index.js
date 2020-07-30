@@ -24,6 +24,7 @@ var creationCellIndex;
 var totalCellsInYear;
 const weekdays = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+let loremPicsum = "https://picsum.photos/seed/";
 var yearTemplate;
 var restOfYearTemplate;
 var currentMonthTemplate;
@@ -65,9 +66,9 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
     fullPageDropBox = document.querySelector(".full-page-drop");
     setupSpinner();
     addListener('click', '.flip', flipBoard);
-    addListener('mousedown', '.lit', toggleCell);
-    addListener('touchstart', '.lit', toggleCell);
-    addListener('mouseover', '.lit', toggleCell, function(event){
+    addListener('mousedown', '.dim', toggleCell);
+    addListener('touchstart', '.dim', toggleCell);
+    addListener('mouseover', '.dim', toggleCell, function(event){
         return 'buttons' in event && event.buttons > 0; // Check that a mouse button is pressed down. 
     });
     addListener('click', '.mon', toggleSpecificMonthView);
@@ -147,8 +148,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
 
     /**************************************************************************************/
     function setRandomDefaultBackground(){
-        var num = Math.floor(Math.random() * Math.floor(15)) + 1; // 1 - 15
-        currentCalendar.image = "backgrounds/" + num + ".jpg";
+        currentCalendar.image = loremPicsum + new Date().getTime() +  "/"; // set it to a random lorem picsum image with the time as a seed.
     }
 
     /**************************************************************************************/
@@ -162,8 +162,8 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                 }
                 document.body.style.backgroundImage = "url("+ URL.createObjectURL(loadedBlob) +")";
             });
-        }else{ // Else it is one of the default background images. 
-            document.body.style.backgroundImage = "url("+image+")";
+        }else{ // Else it is a lorem picsum image. 
+            document.body.style.backgroundImage = "url(" + image + screen.width + "/" + screen.height + ")";
         }
     }
 
@@ -586,17 +586,16 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         var dayBeforeCreation = creationTime - 86400000; // 24 * 60 * 60 * 1000
         var now = new Date();
         var i = 0;
-
         while(date.getFullYear() == currentCalendar.lastYearViewed){ // loop though all the days of that year. 
             var mon = date.getMonth();
             var day = date.getDate()-1; // -1 so the math works out.
             var weekday = date.getDay();
             var time = date.getTime();
 
-            var x = 49 + mon * 44;
             // cells start 82 px down from the top of the board. (giving room for the months titles. which start at 57 and take up 24 px so 81 px. )
             // and move 28 more px down for each day. (so day 1 is at 82 + 0 *28 px down.) since the day is decremented when this function is called. 
             var y = 82 + day * 28;
+            var x = 49 + mon * 44;
 
             // the dots are the third item in sprits.png they are in between the day hexicons. 
             if(day){ // stops it from adding dots for the first row 
@@ -612,21 +611,8 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
             dim.setAttribute("data-year-pos", x+":"+y);
             dim.setAttribute("data-weekday", weekday);
             dim.setAttribute("data-month", mon); 
-
-            var lit = addBoardElement("lit", x, y); // add the lit icon on top of the dim icon.
-            lit.style.opacity = 0; 
-            lit.innerHTML = day + 1; 
-            lit.setAttribute("data-index", i); 
-            lit.setAttribute("data-year-pos", x+":"+y); 
-            lit.setAttribute("data-weekday", weekday);
-            lit.setAttribute("data-month", mon); 
-
-            // TODO: see if it would be more effiecent to change the background image by adding lit class to div. 
           
-            if(time < dayBeforeCreation){ 
-                dim.classList.add("before-creation");
-                lit.classList.add("before-creation");
-            }
+            if(time < dayBeforeCreation) dim.classList.add("before-creation");
             if(time >= dayBeforeCreation && time <= creationTime) creationCellIndex = i;
             if(date.toDateString() == now.toDateString()) todaysCellIndex = i; // Used to calulate the current streak.
             date.setDate(date.getDate() + 1); // Advance the date by one day. 
@@ -668,15 +654,19 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
 
     /**************************************************************************************/
     function loadBoardState(thisState){
-        document.querySelectorAll(".lit").forEach(function(item){
-            item.style.opacity = getLitStateBit(thisState, parseInt(item.getAttribute("data-index")) ) ? 1 : 0; 
+        document.querySelectorAll(".dim").forEach(function(item){
+            if(getLitStateBit(thisState, parseInt(item.getAttribute("data-index")))){
+                item.classList.add("lit");
+            }else{
+                item.classList.remove("lit");
+            }
         });
     }
 
     /**************************************************************************************/
     function clearBoardState(){
-        document.querySelectorAll(".lit").forEach(function(item){
-            item.style.opacity = 0;  
+        document.querySelectorAll(".dim").forEach(function(item){
+            item.classList.remove("lit");        
         });
     }
 
@@ -694,12 +684,9 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
     /**************************************************************************************/
     function decodeState(encoded){
         var state = []; // 61 chars 
-        for(var i = 0; i < 61; i++){
+        for(var i = 0; i < 61; i++){ // * is 42   i is 105.
             var char = (encoded && encoded.charCodeAt(i)) || 0; // if storage exists get the char at the position else use 0;
-            // char code of "*" is 42.
-            // char code of "i" is 105.
-            // push 0 or char - 42    push char - 42 if 42 < char < 106 
-            state.push(char >= 42 && char < 42 + 64 ? char - 42: 0); // if none of them are lit then it is 61 0s in a row. 
+            state.push(char >= 42 && char < 106 ? char - 42: 0);
         }
         return state;
     }
@@ -758,9 +745,9 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
     /**************************************************************************************/
     function toggleCell(e){
         e.preventDefault();
-        var lit = e.target;
-        var index = parseInt(lit.getAttribute("data-index"));
-        lit.style.opacity = toggleLitStateBit(currentState, index) ? 1 : 0;
+        var cell = e.target;
+        var index = parseInt(cell.getAttribute("data-index"));
+        toggleLitStateBit(currentState, index) ? cell.classList.add("lit") : cell.classList.remove("lit") 
         encodeState(currentState);
     }
 
@@ -831,43 +818,32 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         dots.forEach(function(item){
             item.classList.add("hidden");
         }); 
-        var lastCellWeekdayIndex = -1;
+        var thisWeekday = -1;
         var currentCellRow = 0; // index for which weekday top value to use when positioning the cell.
         
         // Position the dots and cells for the month that is being viewed. 
-        document.querySelectorAll(".dim, .lit").forEach(function(item){
+        document.querySelectorAll(".dim").forEach(function(item){
             item.classList.add("hidden");
             if(config.lastMonthViewed == parseInt(item.getAttribute("data-month")) ){
                 item.classList.remove("hidden");
-                var thisWeekday = item.getAttribute("data-weekday");
-
+                thisWeekday = item.getAttribute("data-weekday");
                 var top = 175 + (135 * currentCellRow);
+                var left = 58 + (thisWeekday * 78);
                 item.style.top = top + "px";
-                if(thisWeekday != 6 && item.classList.contains("lit")){ 
+                item.style.left = left + "px";
+                item.style.transform = "scale(2)";                        
+                if(thisWeekday != 6){ 
                     dots[dotIndex].classList.remove("hidden");
                     dots[dotIndex].style.transform = "rotate(90deg) scale(2)";
                     dots[dotIndex].style.top = top + 10 + "px";
-                }
-
-                // Move down the board for the next cell after adding a cell to saturday.
-                if(lastCellWeekdayIndex == 6 && item.classList.contains("lit")) currentCellRow++; 
-                lastCellWeekdayIndex = thisWeekday;
-
-                for(var i in weekdays){ // Position the dots and cells horizontally to match the day of the week that they are. 
-                    if(i == lastCellWeekdayIndex){
-                        item.style.transform = "scale(2)";                        
-                        var left = 58 + (i * 78);
-                        item.style.left = left + "px";
-                        if(thisWeekday != 6 && item.classList.contains("lit")){
-                            dots[dotIndex].style.left = left + 40 + "px";
-                            dotIndex++;
-                        }
-                        break;
-                    }
-                }
+                    dots[dotIndex].style.left = left + 40 + "px";
+                    dotIndex++;
+                }else{
+                    currentCellRow++; // Move down the board for the next cell after adding a cell to saturday.
+                }       
             }
         });
-        if(lastCellWeekdayIndex != "sat") dots[dotIndex-1].classList.add("hidden"); // Remove the dots that appears next to the last cell, if the last cell was not on saturday.
+        if(thisWeekday != 6) dots[dotIndex-1].classList.add("hidden"); // Remove the dots that appears next to the last cell, if the last cell was not on saturday.
     }
 
     /**************************************************************************************/
@@ -878,10 +854,10 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
             item.classList.remove("month-view-active-month");
         });
 
-        // Reset the styles of the dim and lit cells.
+        // Reset the styles of the dim cells.
         // need to do this for all of them and not just the lastMonthViewed, because they may have switched from one month to another.
         // So it is this, or doing this in toggleSpecificMonthView before changing lastMonthViewed. 
-        document.querySelectorAll(".dim, .lit, .dots").forEach(function(item){ 
+        document.querySelectorAll(".dim, .dots").forEach(function(item){ 
             item.classList.remove("hidden");
             var positionArray = String(item.getAttribute("data-year-pos")).split(":");
             item.style.left = positionArray[0] + "px";
@@ -1262,10 +1238,47 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
 
     /**************************************************************************************/
     function createEditor(notesContent){
+
+        // get all attachments, then create URL objects for them.
+        // create an object to pass SunEditor for an image galery of the attachments.
+        // then SunEditor will add that URL object to its content. 
+        // Save the urls, then on save search the note for those urls and replace the URLs with refrences to the attachment that was added.
+        // possilby even add it as a new attachment. 
+        // would need to only add the uniqe images to the image gallary. The digest from pouchDB can be used for this.
+
+
+        // var obj = {"statusCode":200,"result":[
+        //     {"src":"backgrounds/1.jpg","name":"Gray Bridge and Trees","alt":"","tag":"By Martin Damboldt"},
+        //     {"src":"backgrounds/2.jpg","name":"Road Sky Clouds Curve","alt":"","tag":"By Martin Damboldt"},
+        //     {"src":"backgrounds/3.jpg","name":"Top View of Valley Near Body of Water","alt":"","tag":"By Pixabay"},
+        //     {"src":"backgrounds/4.jpg","name":"Brown Wooden Bridge","alt":"","tag":"By Pok Rie"},
+        //     {"src":"backgrounds/5.jpg","name":"Road Between Pine Trees","alt":"","tag":"By veeterzy"},
+        //     {"src":"backgrounds/6.jpg","name":"Body of Water Between Green Leaf Trees","alt":"","tag":"By Ian Turnell"},
+        //     {"src":"backgrounds/7.jpg","name":"Calm Body of Lake Between Mountains","alt":"","tag":"By Bri Schneiter"},
+        //     {"src":"backgrounds/8.jpg","name":"Panoramic Photography of Green Field","alt":"","tag":"By Ákos Szabó"},
+        //     {"src":"backgrounds/9.jpg","name":"Time Lapse Photography of Waterfalls during Sunset","alt":"","tag":"By Pixabay"},
+        //     {"src":"backgrounds/10.jpg","name":"Scenic View of Rice Paddy","alt":"","tag":"By Pixabay"},
+        //     {"src":"backgrounds/11.jpg","name":"Trees Near Body of Water","alt":"","tag":"By Pixabay"},
+        //     {"src":"backgrounds/12.jpg","name":"Lake and Mountain","alt":"","tag":"By James Wheeler"},
+        //     {"src":"backgrounds/13.jpg","name":"Lake and Mountain Under White Sky","alt":"","tag":"By eberhard grossgasteiger"},
+        //     {"src":"backgrounds/14.jpg","name":"Black Mountains Under the Stars at Nighttime","alt":"","tag":"By Pixabay"},
+        //     {"src":"backgrounds/15.jpg","name":"Blue Pink and White Andromeda Galaxy Way","alt":"","tag":"By Miriam Espacio"}
+        // ]};
+
+        // obj = {"statusCode":200,"result":[
+        // ]};
+
+        // var url =  URL.createObjectURL(new Blob([JSON.stringify(obj)], {type: "application/json"}))
+        // console.log(url);
+
+
+
+
+
         editor = SUNEDITOR.create('sunEditor', {
             value: notesContent,      
             placeholder: "Notes for this calendar...",
-            imageGalleryUrl:  "backgrounds/info.json", 
+            imageGalleryUrl: "backgrounds/info.json", 
             buttonList: [
                 ['undo', 'redo'],
                 ['font', 'fontSize', 'formatBlock'],
