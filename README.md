@@ -12,7 +12,6 @@ Disclaimer: Zhen Wang is not affiliated with Simone Giertz's Every Day Calendar 
 [Changelog](changelog.md)
 
 ## To Do
-- There is a bug that seems to delete the calendar background image if you import the same image twice. 
 - 
     ```
     ** Change SunEditor image gallary to have all the images that are in any note or a calendar background.**
@@ -22,7 +21,12 @@ Disclaimer: Zhen Wang is not affiliated with Simone Giertz's Every Day Calendar 
     Save the urls, then on save search the note for those urls and replace the URLs with refrences to the attachment that was added.
     possilby even add it as a new attachment. 
     would need to only add the uniqe images to the image gallary. The digest from pouchDB can be used for this.
+    could possibly use a base64 url instead of a URL object. 
     ```
+- Change pouchDB functions to make sure that an attachment name is not starting with a _
+- add a delay timmer function for saving the config file. 
+
+
 
 ## Possible Future Changes
  

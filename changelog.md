@@ -1,6 +1,20 @@
 # Changelog
 
 
+## [1.0.3]
+
+### Added
+-  A function called saveCurrentCalendarAfterDelay that waits a short time before saving the calendars contents. If durring this time it is called again then it will restart its timmer for when it should save. This can be used in situations where the user is making changes rapidly and you don't want it to save after all of these changes.
+    - This function is being used when a user toggles a day between being on and off. 
+
+### Fixed
+- Fixed the issue where it would delete a calendar background if you added an image that has the same name as the old background image.
+- Changed the id on the image drop box on the back of the board. It was the same id as the full page dropbox.
+- Added code to remove _ from the begining of backgrounds names, since pouchDB attachments can't start with that. Should move it to the pouchDB helpers.
+
+### Removed
+- Got rid of the sweet alert pop alert that would show that the user hit cancel, when deleting a calendar or all data.
+
 ## [1.0.2]
 
 ### Added

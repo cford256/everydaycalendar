@@ -5,8 +5,9 @@ var board;
 var sidebar;
 var calContainer;
 var spinElement;
-var fullPageDropBox;
 var spinner;
+var saveIcon;
+var fullPageDropBox;
 var editor;
 var sortingSidebar = false;
 var currentStreakDiv;
@@ -59,6 +60,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
     sidebar = document.querySelector("#sidebar");
     calContainer = document.querySelector(".calendars-container");
     spinElement = document.querySelector("#spinner");
+    saveIcon = document.querySelector("ion-icon[name='save-sharp']");
     currentStreakDiv = document.querySelector("#stats-current-streak");
     longestStreakSpan = document.querySelector("#stats-longest-streak span");
     totalLitSpan = document.querySelector("#stats-total-lit span");
@@ -376,8 +378,6 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                     addNewCalendar();
                     Swal.fire('Deleted!', 'All Calendars have been deleted.', 'success');
                 })
-            }else if (result.dismiss === Swal.DismissReason.cancel) {
-                Swal.fire('Cancelled', 'Your data was not deleted.','error');
             }
         });
     }
@@ -678,7 +678,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         currentCalendar.states[currentCalendar.lastYearViewed] = currentState.reduce(function(s, v){
             return s + String.fromCharCode(42 + v);
         }, "");
-        saveCurrentCalendar();
+        saveCurrentCalendarAfterDelay();
     }
 
     /**************************************************************************************/
@@ -703,13 +703,11 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
 
     /**************************************************************************************/
     function showSave(){
-        var saveIcon = document.querySelector("ion-icon[name='save-sharp']");
         saveIcon.classList.add("saving");
     }
 
     /**************************************************************************************/
     function hideSave(){
-        var saveIcon = document.querySelector("ion-icon[name='save-sharp']");
         saveIcon.classList.remove("saving");
     }
 
@@ -720,7 +718,18 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
 
     /**************************************************************************************/
     function saveCurrentCalendar(){
+        clearTimeout(saveCalendarTimmer);
+        saveIcon.classList.remove("waiting-to-save");
         return dbPutDoc(db, currentCalendar.id, currentCalendar);
+    }
+
+    var saveCalendarTimmer;
+
+    /**************************************************************************************/
+    function saveCurrentCalendarAfterDelay(){
+        saveIcon.classList.add("waiting-to-save");
+        clearTimeout(saveCalendarTimmer);
+        saveCalendarTimmer = setTimeout( saveCurrentCalendar, 550);
     }
 
 //#endregion
@@ -990,8 +999,6 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                     }
                     Swal.fire('Deleted!', currentCalendar.title + " has been deleted!", 'success' );
                 })
-            }else if(result.dismiss === Swal.DismissReason.cancel){
-                Swal.fire( 'Cancelled', currentCalendar.title + " has not been deleted.", 'error' );
             }
         })  
     }
@@ -1087,14 +1094,18 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         closeModalIfNotSunEditor(); 
 
         var oldImgae = false;
-        if(currentCalendar.image.indexOf("ATT_") != -1){ // Could save the current calendar and add the attachments to it at the same time. 
-            oldImgae = currentCalendar.image.replace("ATT_", "");
+        if(currentCalendar.image.indexOf("ATT_") != -1 ){ // Could save the current calendar and add the attachments to it at the same time. 
+            var currentImage = currentCalendar.image.replace("ATT_", "");
+            if(currentImage != file.name) oldImgae = currentImage; // the new image is overwriting the old one, don't want to then delete it.
         }
+        var filename = file.name;
+        if(filename.indexOf("_") == 0) filename = filename.slice(1); // should move this functionality to the pouchDB code. TODO: // attachments cant start with a _
 
-        currentCalendar.image = "ATT_" + file.name;
+        currentCalendar.image = "ATT_" + filename;
         saveCurrentCalendar().then(function(){
-            return dbPutAttachment(db, currentCalendarId, file.name, file, file.type)
+            return dbPutAttachment(db, currentCalendarId, filename, file, file.type)
         }).then(function(){
+            console.log(oldImgae);
             if(oldImgae != false) dbDeleteAttachment(db, currentCalendarId, oldImgae);
         })
     }
@@ -1247,38 +1258,22 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         // would need to only add the uniqe images to the image gallary. The digest from pouchDB can be used for this.
 
 
-        // var obj = {"statusCode":200,"result":[
-        //     {"src":"backgrounds/1.jpg","name":"Gray Bridge and Trees","alt":"","tag":"By Martin Damboldt"},
-        //     {"src":"backgrounds/2.jpg","name":"Road Sky Clouds Curve","alt":"","tag":"By Martin Damboldt"},
-        //     {"src":"backgrounds/3.jpg","name":"Top View of Valley Near Body of Water","alt":"","tag":"By Pixabay"},
-        //     {"src":"backgrounds/4.jpg","name":"Brown Wooden Bridge","alt":"","tag":"By Pok Rie"},
-        //     {"src":"backgrounds/5.jpg","name":"Road Between Pine Trees","alt":"","tag":"By veeterzy"},
-        //     {"src":"backgrounds/6.jpg","name":"Body of Water Between Green Leaf Trees","alt":"","tag":"By Ian Turnell"},
-        //     {"src":"backgrounds/7.jpg","name":"Calm Body of Lake Between Mountains","alt":"","tag":"By Bri Schneiter"},
-        //     {"src":"backgrounds/8.jpg","name":"Panoramic Photography of Green Field","alt":"","tag":"By Ákos Szabó"},
-        //     {"src":"backgrounds/9.jpg","name":"Time Lapse Photography of Waterfalls during Sunset","alt":"","tag":"By Pixabay"},
-        //     {"src":"backgrounds/10.jpg","name":"Scenic View of Rice Paddy","alt":"","tag":"By Pixabay"},
-        //     {"src":"backgrounds/11.jpg","name":"Trees Near Body of Water","alt":"","tag":"By Pixabay"},
-        //     {"src":"backgrounds/12.jpg","name":"Lake and Mountain","alt":"","tag":"By James Wheeler"},
-        //     {"src":"backgrounds/13.jpg","name":"Lake and Mountain Under White Sky","alt":"","tag":"By eberhard grossgasteiger"},
-        //     {"src":"backgrounds/14.jpg","name":"Black Mountains Under the Stars at Nighttime","alt":"","tag":"By Pixabay"},
-        //     {"src":"backgrounds/15.jpg","name":"Blue Pink and White Andromeda Galaxy Way","alt":"","tag":"By Miriam Espacio"}
-        // ]};
+        var obj = {"statusCode":200,"result":[
+            {"src":"backgrounds/1.jpg","name":"Gray Bridge and Trees","alt":"","tag":"By Martin Damboldt"},
+            {"src":"backgrounds/2.jpg","name":"Road Sky Clouds Curve","alt":"","tag":"By Martin Damboldt"},
+            {"src":"backgrounds/5.jpg","name":"Road Between Pine Trees","alt":"","tag":"By veeterzy"}
+        ]};
 
         // obj = {"statusCode":200,"result":[
         // ]};
 
-        // var url =  URL.createObjectURL(new Blob([JSON.stringify(obj)], {type: "application/json"}))
+         var url =  URL.createObjectURL(new Blob([JSON.stringify(obj)], {type: "application/json"}))
         // console.log(url);
-
-
-
-
 
         editor = SUNEDITOR.create('sunEditor', {
             value: notesContent,      
             placeholder: "Notes for this calendar...",
-            imageGalleryUrl: "backgrounds/info.json", 
+            imageGalleryUrl: url, // "backgrounds/info.json", 
             buttonList: [
                 ['undo', 'redo'],
                 ['font', 'fontSize', 'formatBlock'],

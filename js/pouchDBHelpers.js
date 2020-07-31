@@ -200,7 +200,7 @@ function dbBulkPutAttachments(db, id, attachmentsArray, removeAnyOtherAttachment
 }
 
 /**************************************************************************************/
-function dbPutAttachment(db, docId, attachmentName, data, mimeType){
+function dbPutAttachment(db, docId, attachmentName, data, mimeType){   // possibly check to make sure that attachmentName does not start with a _ for all attachment functions TODO:
     showSave();
     var rev = ""; // Not using the spread operator since I am not outruling supporting IE11.
     if(typeof dbRevisions[docId] !== "undefined") rev = dbRevisions[docId];
