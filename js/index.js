@@ -15,6 +15,8 @@ var longestStreakSpan;
 var totalLitSpan;
 var percentLitSpan;
 var currentState;
+var saveCalendarTimmer;
+var saveConfigTimmer; 
 const intialState = "*************************************************************";
 var currentTime = new Date();
 var currentMonth = currentTime.getMonth();
@@ -52,6 +54,9 @@ const defaultConfig = {
     flipped: false
 }
 var config;
+
+var imgGallery;
+// var initialImgGallery = {"statusCode":200, "result":[] };
 
 /**************************************************************************************/
 document.addEventListener('DOMContentLoaded', function(){ // Main
@@ -121,7 +126,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
     /**************************************************************************************/
     function openCalendar(id){
         config.lastCalendarOpened = id;      
-        saveConfig();    
+        saveConfigAfterDelay();
         currentCalendarId = id;  
         creationDate = new Date(id.replace("Cal_", ""));
         if(typeof currentCalendar !== "undefined" && id == currentCalendar.id){ // This is being called from addNewCalendar. 
@@ -199,7 +204,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         var opened = sidebar.classList.contains("opened");
         opened ? sidebar.classList.remove("opened") : sidebar.classList.add("opened");
         config.sidebarOpened = !opened;
-        saveConfig();
+        saveConfigAfterDelay();
     }
 
     /**************************************************************************************/
@@ -265,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                             order.push(item.getAttribute("data-calendar-id"));
                         })  
                         config.sidebarManualOrder = order;
-                        saveConfig();
+                        saveConfigAfterDelay();
                         sortingSidebar = false;
                     }
                 });
@@ -289,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
             default: 
                 config.sidebarSort = "chronological";
         }
-        saveConfig();
+        saveConfigAfterDelay();
         loadCalendarsIntoSidebar();
     }
         
@@ -454,8 +459,8 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
             }
         }
         currentCalendar.title = title;
-        saveCurrentCalendar();
-        loadCalendarsIntoSidebar();
+
+        saveCurrentCalendarAfterDelay(loadCalendarsIntoSidebar);
     }
 
     /**************************************************************************************/
@@ -713,23 +718,34 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
 
     /**************************************************************************************/
     function saveConfig(){
+        clearTimeout(saveConfigTimmer);
+        saveIcon.classList.remove("waiting-to-save");
         return dbPutDoc(db, "Config", config);
     }
 
     /**************************************************************************************/
-    function saveCurrentCalendar(){
+    function saveCurrentCalendar(callback){
         clearTimeout(saveCalendarTimmer);
         saveIcon.classList.remove("waiting-to-save");
-        return dbPutDoc(db, currentCalendar.id, currentCalendar);
+        return Promise.resolve(
+            dbPutDoc(db, currentCalendar.id, currentCalendar).then(function(){
+             if(callback) callback();
+            })
+        );
     }
 
-    var saveCalendarTimmer;
-
     /**************************************************************************************/
-    function saveCurrentCalendarAfterDelay(){
+    function saveCurrentCalendarAfterDelay(callback){        
         saveIcon.classList.add("waiting-to-save");
         clearTimeout(saveCalendarTimmer);
-        saveCalendarTimmer = setTimeout( saveCurrentCalendar, 550);
+        saveCalendarTimmer = setTimeout(function(){saveCurrentCalendar(callback)}, 550);
+    }
+
+    /**************************************************************************************/
+    function saveConfigAfterDelay(){
+        saveIcon.classList.add("waiting-to-save");
+        clearTimeout(saveConfigTimmer);
+        saveConfigTimmer = setTimeout( saveConfig, 1000);
     }
 
 //#endregion
@@ -778,13 +794,13 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         loadBoardState(currentState);  
         if(config.monthview) dislpayMonthView();
         showHideDaysBeforeDate();
-        saveCurrentCalendar();
+        saveConfigAfterDelay();
     }
 
     /**************************************************************************************/
     function toggleCurrentMonthView(){
         config.monthview = !config.monthview;
-        saveConfig();
+        saveConfigAfterDelay();
         config.monthview ? dislpayMonthView() : displayYearView();
     }
 
@@ -804,7 +820,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
             config.monthview = false;
             displayYearView();
         }
-        if(restoreView != true) saveConfig();
+        if(restoreView != true) saveConfigAfterDelay();
     }
 
     /**************************************************************************************/
@@ -881,7 +897,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         var inner = document.getElementById("inner");
         config.flipped = !config.flipped;
         config.flipped ? inner.className = "flipped" : inner.className = "";
-        saveConfig();
+        saveConfigAfterDelay();
         if(config.flipped) updateCalendarStats();
    }
 //#endregion
@@ -967,7 +983,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
     function toggleDaysBeforeDate(e){
         currentCalendar.hideDaysBeforeCreation = e.srcElement.checked;
         showHideDaysBeforeDate();
-        saveCurrentCalendar();
+        saveConfigAfterDelay();
         updateCalendarStats();
     }
 
@@ -1105,7 +1121,6 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         saveCurrentCalendar().then(function(){
             return dbPutAttachment(db, currentCalendarId, filename, file, file.type)
         }).then(function(){
-            console.log(oldImgae);
             if(oldImgae != false) dbDeleteAttachment(db, currentCalendarId, oldImgae);
         })
     }
@@ -1232,6 +1247,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
             if(typeof editor !== "undefined") editor.destroy();
         });
         createHTMLTemplates();
+
         dbGetDoc(db, "Note_" + currentCalendar.id, {"not_found": true}, true).then(function(doc){ 
             var content = "";
             if(!doc.not_found){
@@ -1243,32 +1259,67 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                     content = content.replace("{{"+attName+"}}", base64Image);
                 })
             }      
-            createEditor(content);     
+            createImageGalery().then(function(){
+                createEditor(content)   
+            })
         })
     }
+
+    
+function createImageGalery(){
+    imgGallery = {"statusCode":200, "result":[] };
+    var digests = [];
+    var indexOfImageWithDigest = [];
+  
+    return Promise.resolve(
+        dbGetAllDocs(db, {include_docs: true, attachments: true}).then(function(res){
+            var rows = res.rows;
+            for(var i = 0; i < rows.length; i++){
+                var theseAttachments = rows[i].doc._attachments;
+                var id = rows[i].id;
+                var isNote = id.slice(0, 5) == "Note_";
+
+                for(var imgName in theseAttachments ){
+                    var thisAttachment = theseAttachments[imgName];
+                    var thisTag = id;
+                    var thisName = imgName;
+                    if(isNote){
+                        thisTag = id.slice(5);
+                        thisName = imgName.slice(2); // slice off the prefix added to the note attachment names.
+                    }
+                    thisTag = document.querySelector(".cal-div[data-calendar-id='" + thisTag + "'] .cal-title").innerHTML; 
+
+                    var thisDigest = thisAttachment.digest;
+                    var digestIndex = digests.indexOf(thisDigest);
+                    if(digestIndex == -1){
+                        var imgURL = "data:" + thisAttachment.content_type + ";base64," + thisAttachment.data;
+
+                        imgGallery.result.push({
+                            src: imgURL,
+                            name: thisName, 
+                            tag: thisTag
+                        });
+                        digests.push(thisDigest);
+                        indexOfImageWithDigest.push(imgGallery.result.length-1);
+                    }else{ // It looks like you can't have more than one tag on an image.
+                    //  imgGallery.result[ indexOfImageWithDigest[digestIndex] ].tag += ", " + thisTag; // update the image to be tagged with the other calendar that it is a part of.
+                    }
+                }
+            }   
+            return {ok: true};  
+        })
+    );
+}
+
+
+
 
     /**************************************************************************************/
     function createEditor(notesContent){
 
-        // get all attachments, then create URL objects for them.
-        // create an object to pass SunEditor for an image galery of the attachments.
-        // then SunEditor will add that URL object to its content. 
-        // Save the urls, then on save search the note for those urls and replace the URLs with refrences to the attachment that was added.
-        // possilby even add it as a new attachment. 
-        // would need to only add the uniqe images to the image gallary. The digest from pouchDB can be used for this.
-
-
-        var obj = {"statusCode":200,"result":[
-            {"src":"backgrounds/1.jpg","name":"Gray Bridge and Trees","alt":"","tag":"By Martin Damboldt"},
-            {"src":"backgrounds/2.jpg","name":"Road Sky Clouds Curve","alt":"","tag":"By Martin Damboldt"},
-            {"src":"backgrounds/5.jpg","name":"Road Between Pine Trees","alt":"","tag":"By veeterzy"}
-        ]};
-
-        // obj = {"statusCode":200,"result":[
-        // ]};
-
-         var url =  URL.createObjectURL(new Blob([JSON.stringify(obj)], {type: "application/json"}))
-        // console.log(url);
+        var galleryBlob = new Blob([JSON.stringify(imgGallery)], {type: "application/json"});
+        var url =  URL.createObjectURL(galleryBlob);
+        // need to release this url on close later. TODO:
 
         editor = SUNEDITOR.create('sunEditor', {
             value: notesContent,      

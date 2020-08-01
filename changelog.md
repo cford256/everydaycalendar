@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.4]
+
+### Added
+- The image gallery in sunEditor now contains all the images that are in the notes, or the calendar background images. 
+- Created a new function saveConfigAfterDelay that waits to see if the user makes anymore changes before saving the changes. 
+    - It now uses this function most of the time when saving the config file.
+- Now using saveCurrentCalendarAfterDelay in more places, so it does not try to save when it does not need to.
+- Added a callback option to the save calendar function. 
+    - Saving a calendars title now only saves after the user stops typing for long enough. The callback is used to update the sidebar to have the new name. 
 
 ## [1.0.3]
 

@@ -12,33 +12,22 @@ Disclaimer: Zhen Wang is not affiliated with Simone Giertz's Every Day Calendar 
 [Changelog](changelog.md)
 
 ## To Do
-- 
-    ```
-    ** Change SunEditor image gallary to have all the images that are in any note or a calendar background.**
-    get all attachments, then create URL objects for them.
-    create an object to pass SunEditor for an image galery of the attachments.
-    then SunEditor will add that URL object to its content. 
-    Save the urls, then on save search the note for those urls and replace the URLs with refrences to the attachment that was added.
-    possilby even add it as a new attachment. 
-    would need to only add the uniqe images to the image gallary. The digest from pouchDB can be used for this.
-    could possibly use a base64 url instead of a URL object. 
-    ```
 - Change pouchDB functions to make sure that an attachment name is not starting with a _
 - add a delay timmer function for saving the config file. 
+- Change the image gallery to be created at load time, and updated as new images are added and deleted. 
+- maybe remove the tags from the image gallery since I can't add it to multiple attachments. 
 
 
+- When saving a calendars name maybe it should directly update the sidebar div instead of calling the load calendars into sidebar function.  
 
 ## Possible Future Changes
  
 - [ ] Make page responsive.
-- [ ] See about passing SunEditor a json file for the image galery that shows all the images in pouch db.
 
-- [ ] Change the month view to look and work better.
-    - Could use a grid like a normal calendar. 
-        - Have divs with borders, so the background color could be changed for lit days. 
-        - Don't even use the year cell icons for the month view. 
+- [ ] Maybe rework the export and import so that there is not duplicate attachment files. 
+    - just put all attachments in a folder.
+    - then all the other data could be in one json file.
 
-- [ ] should do this change pouchdb.
 - [ ] Could change pouchDBHelpers to work with multiple databases.
     - Instead of returning the database, it could return an index refrenceing the database.
     - databaseInfo = {  "name of db" :  { db: actualDatabase, revs: revsObject, attachments: attachmentsObject } }
