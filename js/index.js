@@ -3,6 +3,7 @@ const dbName = "EverydayCalendar";
 var frame;
 var board;
 var sidebar;
+var headerTitleDiv;
 var calContainer;
 var spinElement;
 var spinner;
@@ -54,9 +55,10 @@ const defaultConfig = {
     flipped: false
 }
 var config;
-
+var initialImgGallery = {"statusCode":200, "result":[] };
 var imgGallery;
-// var initialImgGallery = {"statusCode":200, "result":[] };
+var imgGalleryContent = [];
+var imgGalleryURL;
 
 /**************************************************************************************/
 document.addEventListener('DOMContentLoaded', function(){ // Main
@@ -71,6 +73,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
     totalLitSpan = document.querySelector("#stats-total-lit span");
     percentLitSpan = document.querySelector("#stats-percent-lit span");
     fullPageDropBox = document.querySelector(".full-page-drop");
+    headerTitleDiv = document.querySelector(".editable-title");
     setupSpinner();
     addListener('click', '.flip', flipBoard);
     addListener('mousedown', '.dim', toggleCell);
@@ -98,7 +101,9 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
 
             if(config.lastCalendarOpened != null){
                 openCalendar(config.lastCalendarOpened);
-                loadCalendarsIntoSidebar(); 
+                loadCalendarsIntoSidebar().then(function(){
+                    buildImageGaleryContent();
+                });
             }else{ // Inital Load.
                 addNewCalendar();
             }
@@ -435,32 +440,31 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
 
     /**************************************************************************************/
     function changeHeaderTitle(newTitle){
-        document.querySelector(".editable-title").innerHTML = newTitle;
+        headerTitleDiv.innerHTML = newTitle;
     }
 
     /**************************************************************************************/
     function saveNewCalendarTitle(e){ // Could limit the length. around 21 chars are what fits before the sidebar starts shrinking the ionicon
-        var titleDiv = document.querySelector(".editable-title");
-        var title = titleDiv.innerText;  
+        var title = headerTitleDiv.innerText;  
         if(e.data != " "){ // Don't Check user input if the input is a space. 
-            var caretPos = getCaretCharacterOffsetWithin(titleDiv);
+            var caretPos = getCaretCharacterOffsetWithin(headerTitleDiv);
             var oldLength = title.length;    
             title = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Remove chars I don't want to allow. 
             title = title.replace(/[^0-9a-zA-Z\s]/g, "");  
             if(title.length > 0){
-                titleDiv.innerHTML = title;
+                headerTitleDiv.innerHTML = title;
                 if(caretPos >= 0 && caretPos <= title.length){
                     oldLength > title.length ? setCaret(caretPos-1) : setCaret(caretPos); // If the newly added char was removed by the regex then set cursor positon back one.
                 }else{
                     setCaret(title.length)
                 }
             }else{
-                titleDiv.innerHTML = " "; // If you set it to an empty string you loose the caret. So, insert a spcae to prevent that. 
+                headerTitleDiv.innerHTML = " "; // If you set it to an empty string you loose the caret. So, insert a spcae to prevent that. 
             }
         }
         currentCalendar.title = title;
-
-        saveCurrentCalendarAfterDelay(loadCalendarsIntoSidebar);
+        document.querySelector("div[data-calendar-id='" + currentCalendarId + "'] .cal-title").innerHTML = title;
+        saveCurrentCalendarAfterDelay();
     }
 
     /**************************************************************************************/
@@ -729,7 +733,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
         saveIcon.classList.remove("waiting-to-save");
         return Promise.resolve(
             dbPutDoc(db, currentCalendar.id, currentCalendar).then(function(){
-             if(callback) callback();
+                if(callback) callback();
             })
         );
     }
@@ -1115,6 +1119,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
             if(currentImage != file.name) oldImgae = currentImage; // the new image is overwriting the old one, don't want to then delete it.
         }
         var filename = file.name;
+
         if(filename.indexOf("_") == 0) filename = filename.slice(1); // should move this functionality to the pouchDB code. TODO: // attachments cant start with a _
 
         currentCalendar.image = "ATT_" + filename;
@@ -1122,6 +1127,12 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
             return dbPutAttachment(db, currentCalendarId, filename, file, file.type)
         }).then(function(){
             if(oldImgae != false) dbDeleteAttachment(db, currentCalendarId, oldImgae);
+            var reader = new FileReader(); // Update theimage Gallery to also contain this new background.
+            reader.onload = function(){
+                var base64Data = reader.result.split(",")[1]    
+                addImgToImgGallery(file.name, headerTitleDiv.innerText, file.type, base64Data, -1);
+            };
+            reader.readAsDataURL(file);
         })
     }
 
@@ -1245,9 +1256,10 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
             showConfirmButton: false,
         }).then(function(result){
             if(typeof editor !== "undefined") editor.destroy();
+            URL.revokeObjectURL(imgGalleryURL);
         });
-        createHTMLTemplates();
 
+        createHTMLTemplates();
         dbGetDoc(db, "Note_" + currentCalendar.id, {"not_found": true}, true).then(function(doc){ 
             var content = "";
             if(!doc.not_found){
@@ -1259,72 +1271,95 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                     content = content.replace("{{"+attName+"}}", base64Image);
                 })
             }      
-            createImageGalery().then(function(){
-                createEditor(content)   
-            })
+            createEditor(content);
         })
     }
 
-    
-function createImageGalery(){
-    imgGallery = {"statusCode":200, "result":[] };
-    var digests = [];
-    var indexOfImageWithDigest = [];
-  
-    return Promise.resolve(
-        dbGetAllDocs(db, {include_docs: true, attachments: true}).then(function(res){
-            var rows = res.rows;
-            for(var i = 0; i < rows.length; i++){
-                var theseAttachments = rows[i].doc._attachments;
-                var id = rows[i].id;
-                var isNote = id.slice(0, 5) == "Note_";
-
-                for(var imgName in theseAttachments ){
-                    var thisAttachment = theseAttachments[imgName];
-                    var thisTag = id;
-                    var thisName = imgName;
-                    if(isNote){
-                        thisTag = id.slice(5);
-                        thisName = imgName.slice(2); // slice off the prefix added to the note attachment names.
+    /**************************************************************************************/  
+    function buildImageGaleryContent(){
+        return Promise.resolve(
+            dbGetAllDocs(db, {include_docs: true, attachments: true}).then(function(res){
+                var rows = res.rows;
+                for(var i = 0; i < rows.length; i++){
+                    var theseAttachments = rows[i].doc._attachments;
+                    var id = rows[i].id;
+                    var isNote = id.slice(0, 5) == "Note_";
+                    for(var imgName in theseAttachments ){
+                        var thisAttachment = theseAttachments[imgName];
+                        var tempId = id;
+                        var thisName = imgName;
+                        if(isNote){
+                            thisName = imgName.slice(2); // slice off the prefix added to the note attachment names.
+                            tempId = id.slice(5);
+                        }
+                        var thisTag = document.querySelector(".cal-div[data-calendar-id='" + tempId + "'] .cal-title").innerHTML; 
+                        addImgToImgGallery(thisName, thisTag, thisAttachment.content_type, thisAttachment.data, thisAttachment.digest);
                     }
-                    thisTag = document.querySelector(".cal-div[data-calendar-id='" + thisTag + "'] .cal-title").innerHTML; 
+                }   
+                return {ok: true};  
+            })
+        );
+    }
 
-                    var thisDigest = thisAttachment.digest;
-                    var digestIndex = digests.indexOf(thisDigest);
-                    if(digestIndex == -1){
-                        var imgURL = "data:" + thisAttachment.content_type + ";base64," + thisAttachment.data;
+    /**************************************************************************************/
+    function imgGalleryHasDigest(thisDigest){
+        var hasDigest = false;
+        for(var i = 0; i < imgGalleryContent.length; i++){
+            if(thisDigest == imgGalleryContent[i].digest){
+                hasDigest = true;
+                break;
+            }
+        }
+        return hasDigest;
+    }
 
-                        imgGallery.result.push({
-                            src: imgURL,
-                            name: thisName, 
-                            tag: thisTag
-                        });
-                        digests.push(thisDigest);
-                        indexOfImageWithDigest.push(imgGallery.result.length-1);
-                    }else{ // It looks like you can't have more than one tag on an image.
-                    //  imgGallery.result[ indexOfImageWithDigest[digestIndex] ].tag += ", " + thisTag; // update the image to be tagged with the other calendar that it is a part of.
-                    }
-                }
-            }   
-            return {ok: true};  
-        })
-    );
-}
+    /**************************************************************************************/
+    function imgGalleryHasImage(mime, data){
+        var hasImgData = false;
+        var img = "data:" + mime + ";base64," + data;
+        for(var i = 0; i < imgGalleryContent.length; i++){
+            if(img == imgGalleryContent[i].url){
+                hasImgData = true;
+                break;
+            }
+        }
+        return hasImgData;
+    }
 
+    /**************************************************************************************/
+    function addImgToImgGallery(name, tag, mime, data, digest){
+        if( (!imgGalleryHasDigest(digest) || digest == -1) && !imgGalleryHasImage(mime, data) ){
+            imgGalleryContent.push({
+                name: name,
+                url: "data:" + mime + ";base64," + data,
+                digest: digest,
+                tag: tag
+            });
+        }
+    }
 
-
+    /**************************************************************************************/
+    function createImageGalleryURL(){
+        URL.revokeObjectURL(imgGalleryURL);
+        imgGallery = JSON.parse(JSON.stringify(initialImgGallery));
+        for(var i = 0; i < imgGalleryContent.length; i++){
+            imgGallery.result.push({
+                src: imgGalleryContent[i].url,
+                name: imgGalleryContent[i].name, 
+                tag: imgGalleryContent[i].tag
+            });
+        }
+        var galleryBlob = new Blob([JSON.stringify(imgGallery)], {type: "application/json"});
+        imgGalleryURL =  URL.createObjectURL(galleryBlob);
+    }
 
     /**************************************************************************************/
     function createEditor(notesContent){
-
-        var galleryBlob = new Blob([JSON.stringify(imgGallery)], {type: "application/json"});
-        var url =  URL.createObjectURL(galleryBlob);
-        // need to release this url on close later. TODO:
-
+        createImageGalleryURL();
         editor = SUNEDITOR.create('sunEditor', {
             value: notesContent,      
             placeholder: "Notes for this calendar...",
-            imageGalleryUrl: url, // "backgrounds/info.json", 
+            imageGalleryUrl: imgGalleryURL,
             buttonList: [
                 ['undo', 'redo'],
                 ['font', 'fontSize', 'formatBlock'],
@@ -1384,22 +1419,10 @@ function createImageGalery(){
             charCounter: true,  
             charCounterLabel: "Characters:",
             templates: [
-                {
-                    name: 'Calendar Year Tables',
-                    html: yearTemplate
-                },
-                {
-                    name: 'Rest of Year Tables',
-                    html: restOfYearTemplate
-                },
-                {
-                    name: 'Current Month Table',
-                    html: currentMonthTemplate
-                },
-                {
-                    name: 'Days after Calendar Created',
-                    html: sinceCreationTemplate
-                }
+                { name: 'Calendar Year Tables', html: yearTemplate },
+                { name: 'Rest of Year Tables', html: restOfYearTemplate },
+                { name: 'Current Month Table', html: currentMonthTemplate },
+                { name: 'Days after Calendar Created', html: sinceCreationTemplate }
             ],      
             callBackSave: saveEditorContents
         });    
@@ -1408,16 +1431,14 @@ function createImageGalery(){
     /**************************************************************************************/
     function saveEditorContents(){
         var attachmentsArray = {};
-        var contents = editor.getContents(true)
+        var contents = editor.getContents(true);
         var images = editor.getImagesInfo();
         images.forEach(function(img, i){
             var isBase64 = img.src.match(/^data:.*;base64,/) != null;
             if(isBase64){
+                // could use regex to check if valid. /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/ https://stackoverflow.com/questions/7860392/determine-if-string-is-in-base64-using-javascript
                 var type = img.src.split(";")[0].split(":")[1];
-                // could use regex to check if valid. /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/
-                // https://stackoverflow.com/questions/7860392/determine-if-string-is-in-base64-using-javascript
-                var base64 = img.src.split(",")[1]; //.replace("==", "");   
-
+                var base64 = img.src.split(",")[1];  
                 // Prefix the attachment name with i_ to allow for multiple attachments with the same name.
                 // If the same image is in the note twice it will save the image with two diffrent names, but under the hood pouchDB will only store the image data once.
                 var attachmentName = i + "_" + img.name;
@@ -1426,11 +1447,19 @@ function createImageGalery(){
                     "data": base64
                 }    
                 contents = contents.replace(img.src, "{{" + attachmentName + "}}");  
+                addImgToImgGallery(img.name, headerTitleDiv.innerText, type, base64, -1);
             }
         })
         var noteId = "Note_" + currentCalendar.id;
         dbPutDoc(db, noteId, contents).then(function(){
-          dbBulkPutAttachments(db, noteId, attachmentsArray, true)
+          return dbBulkPutAttachments(db, noteId, attachmentsArray, true)
+        }).then(function(){ // Rebuild the editor so the image gallery has any new images. 
+            if(images.length > 0){ // Not sure if it is worth destroying the editor like this.
+                createImageGalleryURL();
+                var currentContent = editor.getContents(true);
+                editor.destroy();
+                createEditor(currentContent);
+            }
         })
     }
 

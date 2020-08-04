@@ -13,12 +13,11 @@ Disclaimer: Zhen Wang is not affiliated with Simone Giertz's Every Day Calendar 
 
 ## To Do
 - Change pouchDB functions to make sure that an attachment name is not starting with a _
-- add a delay timmer function for saving the config file. 
-- Change the image gallery to be created at load time, and updated as new images are added and deleted. 
+
 - maybe remove the tags from the image gallery since I can't add it to multiple attachments. 
+    - sunEditor will be updated to allow for multiple tags.
+- maybe save if sunEditor is open, and open it on when the page is opened again. 
 
-
-- When saving a calendars name maybe it should directly update the sidebar div instead of calling the load calendars into sidebar function.  
 
 ## Possible Future Changes
  

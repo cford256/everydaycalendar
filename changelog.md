@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.5]
+
+### Changed
+- The content for the image gallery is not created on load. Then when a new images is added to the background, or a note with a new image is saved, the image gallery is updated. Rather than fetching every image when the editor is opened. 
+    - There is no need to update the image gallery when an image is deleted. It makes sense to keep the image in the gallery in case they want to add it to something after it's deletion. 
+    - The deleted images in the image gallery will be removed once the page is reloaded. 
+- The textarea of sunEditor is now initally set to display: none. So it won't be visible while the content is being built for sunEditor.
+- The Sweet alert close button now has a lower z-index. It was appearing above sunEditor's image gallery. 
+- Now updating a calendar's title in the sidebar directly, when changing the title. Rather than updating the entire sidebar.
+- The calendar icon in the sidebar now has flex-shrink: 0 on it.
+
+
 ## [1.0.4]
 
 ### Added

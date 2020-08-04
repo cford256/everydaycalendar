@@ -35,7 +35,17 @@ body{
 .editor-swal-height{
     .se-resizing-bar{ cursor: default !important; }
     strong{ font-weight:bold; }
+
+    .swal2-close{
+        z-index: 1; // Was appearing above the image gallery. 
+    }
+
+    textarea{
+        display: none;
+    }
 }
+
+
 
 .about-info{
     p{
