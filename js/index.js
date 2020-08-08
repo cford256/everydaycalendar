@@ -338,17 +338,37 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
     function exportCalendarJson(){
         showSpinner();
         var zip = new JSZip();
+        var outputData = { 
+            cal: {},
+            notes: {}
+        };
         dbGetAllDocs(db, {include_docs: true, attachments: true}).then(function(res){
+            var imgFolder = zip.folder("attachments");
+            var attachmentInfo = {};
             var rows = res.rows;
             for(var i = 0; i < rows.length; i++){
-                var docFolder = zip.folder(rows[i].id);
+                var id = rows[i].doc._id;
                 var theseAttachments = rows[i].doc._attachments;
-                for(var j in theseAttachments ){
-                    docFolder.file(j, theseAttachments[j].data,  {base64: true});
+                var isNote = id.indexOf("Note_") == 0;
+                var contentData = rows[i].doc.docContent;
+                for(var attachmentName in theseAttachments ){
+                    var digest = theseAttachments[attachmentName].digest;
+                    var imgName = digest + "__";
+                    isNote ? imgName += attachmentName.slice(2) : imgName += attachmentName;
+                    if(typeof attachmentInfo[digest] === 'undefined'){
+                        attachmentInfo[digest] = imgName;
+                        imgFolder.file(encodeURIComponent(imgName), theseAttachments[attachmentName].data, {base64: true});
+                    }
+                    if(isNote){
+                        contentData = contentData.replace("{{"+attachmentName+"}}", "{{"+digest+"}}");
+                    }else{
+                        if(contentData.image.indexOf("ATT_" == 0))  contentData.image = digest;
+                    }
                 }
-                docFolder.file( rows[i].doc._id, JSON.stringify(rows[i].doc.docContent),  {base64: false});
+                isNote ? outputData.notes[id] = contentData : outputData.cal[id] = contentData;
             }
-           downloadZip(zip, "Calendar_" + currentTime.getTime());
+            zip.file( "data.json", JSON.stringify(outputData), {base64: false});          
+            downloadZip(zip, "Calendar_" + new Date().toUTCString());
         })      
     }
 
@@ -1148,55 +1168,81 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                 if(entries[i].dir == false) files.push(entries[i]);
             }
             var listOfPromises = files.map(function(file){
-                var parts = file.name.split("/");
-                var dirName = parts[0];
-                var fileName = parts[1];
+                var isAttachment = (file.name != "data.json");
+                var fileName =  isAttachment ? decodeURIComponent(file.name.split("/")[1]) : "data.json";    
                 var asyncMethod = "string";
-                if(dirName != fileName) asyncMethod = "base64"; // it was an attachment.           
+                if(isAttachment) asyncMethod = "base64";
                 return file.async(asyncMethod).then(function(content){
-                    return [asyncMethod, dirName, fileName, content];
+                    return [asyncMethod, fileName, content];
                 });
             });
 
             Promise.all(listOfPromises).then(function(list){
                 var docs = [];
-                // First add all the docs to the array. 
+                var importDocs; 
+                var attachments = {};
                 for(var i = 0; i < list.length; i++){
                     var type = list[i][0];
-                    var docName = list[i][1];
-                    var data = list[i][3];
-                    if(type == "string"){
-                        docs.push({
-                            _id: docName,
-                            docContent: JSON.parse(data)
-                        });
-                    }
+                    var fileName = list[i][1];
+                    var data = list[i][2];
+                    if(type == "string") importDocs = JSON.parse(data);
+                    if(type == "base64"){
+                        var delimiterIndex = fileName.indexOf("__");
+                        var digest = fileName.slice(0, delimiterIndex);
+                        fileName = fileName.slice(delimiterIndex+2);
+                        attachments[digest] = {
+                            'name': fileName,
+                            'type': guessImageMime(data),
+                            'data': data
+                        } 
+                    }    
                 }
 
-                // Next go though and add all the attachments to thier documents.
-                for(var i = 0; i < list.length; i++){
-                    var type = list[i][0];
-                    var docName = list[i][1];
-                    var fileName = list[i][2];
-                    var data = list[i][3];
-                    if(type == "base64"){
-                        for(var j = 0; j < docs.length; j++){ // Find the doc that the attachment belongs to. 
-                            if(docs[j]._id == docName){
-                                if(typeof docs[j]._attachments === "undefined") docs[j]._attachments = {};
-                                docs[j]._attachments[fileName] = {
-                                    "content_type": guessImageMime(data),
-                                    "data": data
-                                }  
-                                break;
+                for(var id in importDocs.cal){
+                    var thisContent = importDocs.cal[id];
+                    var thisAttachment = false;
+                    if(typeof thisContent.image !== 'undefined' && thisContent.image.indexOf("picsum") == -1){
+                        thisAttachment = attachments[thisContent.image];
+                        thisContent.image = "ATT_" + thisAttachment.name;
+                    }
+                    var thisDoc = { _id: id, docContent: thisContent };
+                    if(thisAttachment != false){
+                        thisDoc._attachments = {
+                            [thisAttachment.name]: {
+                                "content_type": thisAttachment.type,
+                                "data": thisAttachment.data
                             }
                         }
-                    }                
+                    }
+                   docs.push(thisDoc);
+                }
+
+                for(var id in importDocs.notes){
+                    var thisContent = importDocs.notes[id];
+                    var thisDoc = { _id: id };
+                    var docAttachments = false;
+                    for(var digest in attachments){
+                        var hasAttachment = thisContent.indexOf("{{"+digest+"}}") != -1;
+                        if(hasAttachment){
+                            var thisAttachment = attachments[digest];
+                            if(docAttachments == false) docAttachments = {};
+                            var thisTitle = Object.keys(docAttachments).length + "_" + thisAttachment.name;
+                            thisContent = thisContent.replace("{{"+digest+"}}", "{{"+thisTitle+"}}");
+                            docAttachments[thisTitle] = {
+                                "content_type": thisAttachment.type,
+                                "data": thisAttachment.data
+                            }
+                        }
+                    }
+                    thisDoc["docContent"] = thisContent;
+                    if(docAttachments != false) thisDoc._attachments = docAttachments;
+                    docs.push(thisDoc);
                 }
 
                 dbDelete(db).then(function(){
                     db = getDB(dbName);
                     return dbBulkCreateDoc(db, docs);
-                }).then(function(){
+                }).then(function(e){
                     return dbGetDoc(db, "Config", defaultConfig)
                 }).then(function(response){
                     config = typeof response._rev === "undefined" ? response : response.docContent;
@@ -1205,6 +1251,7 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                     openCalendar(config.lastCalendarOpened);
                     return loadCalendarsIntoSidebar(); 
                 }).then(function(){
+                    buildImageGaleryContent();
                     closeModalIfNotSunEditor();
                     fullPageDropBox.classList.remove("is-uploading", "is-dragover");
                 })
@@ -1283,11 +1330,11 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
                 for(var i = 0; i < rows.length; i++){
                     var theseAttachments = rows[i].doc._attachments;
                     var id = rows[i].id;
-                    var isNote = id.slice(0, 5) == "Note_";
-                    for(var imgName in theseAttachments ){
+                     for(var imgName in theseAttachments ){
                         var thisAttachment = theseAttachments[imgName];
                         var tempId = id;
                         var thisName = imgName;
+                        var isNote = id.indexOf("Note_") == 0;
                         if(isNote){
                             thisName = imgName.slice(2); // slice off the prefix added to the note attachment names.
                             tempId = id.slice(5);

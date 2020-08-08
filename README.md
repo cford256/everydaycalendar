@@ -23,10 +23,6 @@ Disclaimer: Zhen Wang is not affiliated with Simone Giertz's Every Day Calendar 
  
 - [ ] Make page responsive.
 
-- [ ] Maybe rework the export and import so that there is not duplicate attachment files. 
-    - just put all attachments in a folder.
-    - then all the other data could be in one json file.
-
 - [ ] Could change pouchDBHelpers to work with multiple databases.
     - Instead of returning the database, it could return an index refrenceing the database.
     - databaseInfo = {  "name of db" :  { db: actualDatabase, revs: revsObject, attachments: attachmentsObject } }

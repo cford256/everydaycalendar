@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.6]
+
+### Changed
+- The export folder now has all the images inside of an attachments folder. 
+    - They are prefixed with the pouchDB digest so that it does not have multiple copies of the same image, if an image appears in calendars more than once.
+    - All of the data is now stored inside of a data.json file. 
+    - The import function has been changed to be able to import the new format for the exports. 
+- Now using the UTC string for naming the export zip file.
+
+### Fixed
+- The variable isNote inside the buildImageGaleryContent was not being defined in the last commit.
+
 ## [1.0.5]
 
 ### Changed
