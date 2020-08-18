@@ -20,12 +20,7 @@ Disclaimer: Zhen Wang is not affiliated with Simone Giertz's Every Day Calendar 
 
 
 ## Possible Future Changes
- 
 - [ ] Make page responsive.
-
-- [ ] Could change pouchDBHelpers to work with multiple databases.
-    - Instead of returning the database, it could return an index refrenceing the database.
-    - databaseInfo = {  "name of db" :  { db: actualDatabase, revs: revsObject, attachments: attachmentsObject } }
 
 - [ ] Could change pouchDBHelpers to always get the most recent version of the doc before updating it.
     -  Would not have to store and update the revs and attachments.

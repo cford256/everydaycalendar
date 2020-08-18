@@ -1138,13 +1138,10 @@ document.addEventListener('DOMContentLoaded', function(){ // Main
             var currentImage = currentCalendar.image.replace("ATT_", "");
             if(currentImage != file.name) oldImgae = currentImage; // the new image is overwriting the old one, don't want to then delete it.
         }
-        var filename = file.name;
 
-        if(filename.indexOf("_") == 0) filename = filename.slice(1); // should move this functionality to the pouchDB code. TODO: // attachments cant start with a _
-
-        currentCalendar.image = "ATT_" + filename;
+        currentCalendar.image = "ATT_" + file.name;
         saveCurrentCalendar().then(function(){
-            return dbPutAttachment(db, currentCalendarId, filename, file, file.type)
+            return dbPutAttachment(db, currentCalendarId, file.name, file, file.type)
         }).then(function(){
             if(oldImgae != false) dbDeleteAttachment(db, currentCalendarId, oldImgae);
             var reader = new FileReader(); // Update theimage Gallery to also contain this new background.

@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.7] 
+
+### Changed
+- pouchDBHelpers now makes sure that attachments do not start with an underscore.
+ - pouchDBHelpers now works with multiple databases. Instead of returning a database, it returns the name of the database. It now stores a diffrent set of revisions and attachments for each database that it creates.
+
 ## [1.0.6]
 
 ### Changed

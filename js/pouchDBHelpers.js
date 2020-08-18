@@ -14,34 +14,39 @@
  *  new Blob(['Is there life on Mars?'], {type: 'text/plain'})
  * 
  *  If you're worried about ID collisions, you could also use new Date().toJSON() + Math.random(). 
+ * 
+ *  should maybe have a function to define the save functions. // if i wrote it as a module.
  */
 
-var dbRevisions = {};
-var dbAttachments = {};
+var dbs = {};
 
 /**************************************************************************************/
 function getDB(dbName, revLimit, compact){
     if(typeof revLimit == "undefined") revLimit = 1;
     if(typeof compact == "undefined") compact = true;
-    return new PouchDB(dbName, {revs_limit: revLimit, auto_compaction: compact});
+    dbs[dbName] = {
+        "db": new PouchDB(dbName, {revs_limit: revLimit, auto_compaction: compact}),
+        "revisions": {},
+        "attachments": {}
+    };
+    return dbName;
 }
 
 /**************************************************************************************/
-function getDBInfo(db){
+function getDBInfo(dbName){
     return Promise.resolve(
-        db.info().then(function(info){
+        dbs[dbName].db.info().then(function(info){
             return info; // {"doc_count":0,"update_seq":0,"db_name":"kittens"}
         })
     );
 }
 
 /**************************************************************************************/
-function dbDelete(db){
-    showSave();
+function dbDelete(dbName){
+    if(showSave) showSave();
     return Promise.resolve(
-        db.destroy().then(function(){
-            dbRevisions = {}; // remove any stored revisions. assumes that thier is only one db. 
-            dbAttachments = {};
+        dbs[dbName].db.destroy().then(function(){
+            delete dbs[dbName];
             console.log("Database Deleted");
             return {"ok": true};
         }).catch(function(e){
@@ -54,15 +59,15 @@ function dbDelete(db){
 }
 
 /**************************************************************************************/
-function dbGetAllDocs(db, options){
-    showSpinner();
+function dbGetAllDocs(dbName, options){
+    if(showSpinner) showSpinner();
     var opt = {};
     if(typeof options !== "undefined") opt = options;
     return Promise.resolve(
-        db.allDocs(opt).then(function(result){
-            result.rows.forEach(function(row){               
-                dbRevisions[row.key] = row.value.rev;
-                if(row.doc) dbAttachments[row.key] = row.doc._attachments;
+        dbs[dbName].db.allDocs(opt).then(function(result){
+            result.rows.forEach(function(row){
+                dbs[dbName].revisions[row.key] = row.value.rev;
+                if(row.doc) dbs[dbName].attachments[row.key] = row.doc._attachments;
             });
             return result;
         }).catch(function(e){
@@ -75,9 +80,9 @@ function dbGetAllDocs(db, options){
 }
 
 /**************************************************************************************/
-function dbLogAllDocs(db){
+function dbLogAllDocs(dbName){
     return Promise.resolve(
-        dbGetAllDocs(db, {include_docs: true, attachments: true}).then(function(docs){
+        dbGetAllDocs(dbName, {include_docs: true, attachments: true}).then(function(docs){
             if(!docs.error) console.log(docs.rows);
             return {"ok": true};
         })
@@ -85,29 +90,29 @@ function dbLogAllDocs(db){
 }
 
 /**************************************************************************************/
-function dbGetAllPrefixedDocs(db, prefix, incDocs, incAtt, attAsBlob){
+function dbGetAllPrefixedDocs(dbName, prefix, incDocs, incAtt, attAsBlob){
     var options = { startkey: prefix, endkey: prefix + "\ufff0" };
     if(typeof incDocs !== "undefined") options.include_docs = incDocs;
     if(typeof incAtt !== "undefined") options.attachments = incAtt;
     if(typeof attAsBlob !== "undefined") options.binary = attAsBlob;
     return Promise.resolve(
-        dbGetAllDocs(db, options)
+        dbGetAllDocs(dbName, options)
     );
 }
 
 /**************************************************************************************/
-function dbPutDoc(db, id, content){
-    showSave();
-    var putData = { _id: id, docContent: content };
-    if(typeof dbRevisions[id] !== "undefined") putData._rev = dbRevisions[id];
-    if(typeof dbAttachments[id] !== "undefined") putData._attachments = dbAttachments[id];    
+function dbPutDoc(dbName, docId, content){
+    if(showSave) showSave();
+    var putData = { _id: docId, docContent: content };
+    if(typeof dbs[dbName].revisions[docId] !== "undefined") putData._rev = dbs[dbName].revisions[docId];
+    if(typeof dbs[dbName].attachments[docId] !== "undefined") putData._attachments = dbs[dbName].attachments[docId];    
     return Promise.resolve(
-        db.put(putData).then(function(result){
-            if(result.ok) dbRevisions[result.id] = result.rev;
+        dbs[dbName].db.put(putData).then(function(result){            
+            if(result.ok) dbs[dbName].revisions[result.id] = result.rev;
             return result;
         }).catch(function(e){
             if(e.name === "conflict"){
-                return dbEnsureDocUpdate(db, id, content);
+                return dbEnsureDocUpdate(dbName, docId, content);
             }else{
                 console.error("dbPutDoc: \t" + e);
                 return {error: true}
@@ -119,24 +124,24 @@ function dbPutDoc(db, id, content){
 }
 
 /**************************************************************************************/
-function dbEnsureDocUpdate(db, id, content){
+function dbEnsureDocUpdate(dbName, docId, content){
     return Promise.resolve(
-        dbGetDoc(db, id).then(function(){ // dbRevisions is updated with the new Rev.
-            return dbPutDoc(db, id, content);
+        dbGetDoc(dbName, docId).then(function(){ // revisions is updated with the new Rev.
+            return dbPutDoc(dbName, docId, content);
         })
     );
 }
 
 /**************************************************************************************/
-function dbGetDoc(db, id, defaultDoc, att, attAsBlob){  
-    showSpinner();
+function dbGetDoc(dbName, docId, defaultDoc, att, attAsBlob){  
+    if(showSpinner) showSpinner();
     var options = {};
     if(typeof att !== "undefined") options.attachments = att; // Include attachment data.
     if(typeof attAsBlob !== "undefined") options.binary = attAsBlob; // Return attachment data as Blobs/Buffers, instead of as base64-encoded strings.
     return Promise.resolve(
-        db.get(id, options).then(function(doc){
-            dbRevisions[doc._id] = doc._rev;
-            dbAttachments[doc._id] = doc._attachments;
+        dbs[dbName].db.get(docId, options).then(function(doc){
+            dbs[dbName].revisions[doc._id] = doc._rev;
+            dbs[dbName].attachments[doc._id] = doc._attachments;          
             return doc;
         }).catch(function(e){ // If defaultDoc is provided, it will return that if the doc does not exist.
             if(e.name === 'not_found' && typeof defaultDoc !== "undefined") return JSON.parse(JSON.stringify(defaultDoc));
@@ -149,14 +154,14 @@ function dbGetDoc(db, id, defaultDoc, att, attAsBlob){
 }
 
 /**************************************************************************************/
-function dbRemoveDoc(db, id){
-    showSave();
+function dbRemoveDoc(dbName, docId){
+    if(showSave) showSave();
     return Promise.resolve(
-        dbGetDoc(db, id).then(function(doc){ // Get the most recent rev rather than trying it with a stored rev that could be wrong. 
-            return db.remove(doc._id, doc._rev);
+        dbGetDoc(dbName, docId).then(function(doc){ // Get the most recent rev rather than trying it with a stored rev that could be wrong. 
+            return dbs[dbName].db.remove(docId, doc._rev);
         }).then(function(){
-            delete dbRevisions[id];
-            delete dbAttachments[id];
+            delete dbs[dbName].revisions[docId];
+            delete dbs[dbName].attachments[docId];  
             return {"ok": true}
         }).catch(function(e){
             console.error("dbRemoveDoc: \t" + e);
@@ -168,27 +173,33 @@ function dbRemoveDoc(db, id){
 }
 
 /**************************************************************************************/
-// Attachments are deduplicated based on their MD5 sum, so duplicate attachments won't take up extra space.
+// Attachments are duplicated based on their MD5 sum, so duplicate attachments won't take up extra space.
 // So it might make sense to append a timestamp to the filename, just in case two diffrent files have the same filename. 
-function dbBulkPutAttachments(db, id, attachmentsArray, removeAnyOtherAttachments){
-    /* attachmentsArray = {
-            "att.txt": {
-                "content_type": "text/plain",
-                "data": new Blob(["And she's hooked to the silver screen"], {type: 'text/plain'})
-            },
-       } */
-    showSave();
-    
+/* attachmentsArray = {
+        "att.txt": {
+            "content_type": "text/plain",
+            "data": new Blob(["And she's hooked to the silver screen"], {type: 'text/plain'})
+        },
+} */
+function dbBulkPutAttachments(dbName, docId, attachmentsArray, removeAnyOtherAttachments){
+    if(showSave) showSave();
     return Promise.resolve(
-        db.get(id, {attachments: true, binary: false}).then(function(doc){
+        dbs[dbName].db.get(docId, {attachments: true, binary: false}).then(function(doc){
             if(typeof doc._attachments == "undefined" || removeAnyOtherAttachments == true) doc._attachments = {};
+            
             for(var i in attachmentsArray){
-                doc._attachments[i] = attachmentsArray[i];
+                var attachmentName = i;
+                while(attachmentName.indexOf("_") == 0){ // Make sure that the file does not start with a _
+                    attachmentName = attachmentName.slice(1);
+                    if(attachmentName == "") attachmentName = "attachment" + new Date().getTime();
+                }
+                doc._attachments[attachmentName] = attachmentsArray[i];
             }
-            dbAttachments[doc._id] = doc._attachments;
-            return db.put(doc);  
+            
+            dbs[dbName].attachments[docId] = doc._attachments;
+            return dbs[dbName].db.put(doc);  
         }).then(function(result){
-            if(result.ok) dbRevisions[result.id] = result.rev;
+            if(result.ok) dbs[dbName].revisions[docId] = result.rev;            
             return {"ok": true};
         }).catch(function(e){
             console.error("dbBulkPutAttachments: \t" + e);
@@ -200,21 +211,26 @@ function dbBulkPutAttachments(db, id, attachmentsArray, removeAnyOtherAttachment
 }
 
 /**************************************************************************************/
-function dbPutAttachment(db, docId, attachmentName, data, mimeType){   // possibly check to make sure that attachmentName does not start with a _ for all attachment functions TODO:
-    showSave();
-    var rev = ""; // Not using the spread operator since I am not outruling supporting IE11.
-    if(typeof dbRevisions[docId] !== "undefined") rev = dbRevisions[docId];
+function dbPutAttachment(dbName, docId, attachmentName, data, mimeType){   
+    if(showSave) showSave();
 
-    if(rev != ""){ 
+    while(attachmentName.indexOf("_") == 0){ // Make sure that the file does not start with a _
+        attachmentName = attachmentName.slice(1);
+        if(attachmentName == "") attachmentName = "attachment" + new Date().getTime();
+    }
+
+    var rev = ""; // Not using the spread operator since I am not out ruling supporting IE11.
+    if(typeof dbs[dbName].revisions[docId] !== "undefined") rev = dbs[dbName].revisions[docId];
+    if(rev != ""){ // putAttachment requires a rev if it is updatating an existing doc. 
         return Promise.resolve(
-            db.putAttachment(docId, attachmentName, rev, data, mimeType).then(function(result){
-                if(result.ok) dbRevisions[result.id] = result.rev;
-                return dbGetDoc(db, result.id); // update the stored attachments. // might be better to always just get the doc and not store the revs at all. 
+            dbs[dbName].db.putAttachment(docId, attachmentName, rev, data, mimeType).then(function(result){
+                if(result.ok) dbs[dbName].revisions[docId] = result.rev;
+                return dbGetDoc(dbName, docId); // update the stored attachments. // might be better to always just get the doc and not store the revs at all. 
             }).then(function(){
                 return {"ok": true}
             }).catch(function(e){
                 if(e.name === "conflict"){
-                    return dbEnsureAttachmentPut(db, docId, attachmentName, data, mimeType);
+                    return dbEnsureAttachmentPut(dbName, docId, attachmentName, data, mimeType);
                 }else{
                     console.error("dbPutAttachment: \t" + e);
                     return {error: true}
@@ -225,18 +241,18 @@ function dbPutAttachment(db, docId, attachmentName, data, mimeType){   // possib
         ); 
     }else{ // try and put the attachment without the rev, in case the doc does not exist. 
         return Promise.resolve(
-            db.putAttachment(docId, attachmentName, data, mimeType).then(function(result){
-                if(result.ok) dbRevisions[result.id] = result.rev;
-                return dbGetDoc(db, result.id);
+            dbs[dbName].db.putAttachment(docId, attachmentName, data, mimeType).then(function(result){
+                if(result.ok) dbs[dbName].revisions[docId] = result.rev;
+                return dbGetDoc(dbName, docId);
             }).then(function(){
                 return {"ok": true}
             }).catch(function(e){
                 if(e.name === "conflict"){
-                    return dbEnsureAttachmentPut(db, docId, attachmentName, data, mimeType);
+                    return dbEnsureAttachmentPut(dbName, docId, attachmentName, data, mimeType);
                 }else{
                     console.error("dbPutAttachment: \t" + e);
                     return {error: true}
-                }       
+                }     
             }).finally(function(){
                 if(hideSave) hideSave();
             }) 
@@ -245,19 +261,19 @@ function dbPutAttachment(db, docId, attachmentName, data, mimeType){   // possib
 }
 
 /**************************************************************************************/
-function dbEnsureAttachmentPut(db, docId, attachmentName, data, mimeType){
+function dbEnsureAttachmentPut(dbName, docId, attachmentName, data, mimeType){
     return Promise.resolve(
-        dbGetDoc(db, docId).then(function(){ // dbRevisions is updated with the new Rev.
-            return dbPutAttachment(db, docId, attachmentName, data, mimeType);
+        dbGetDoc(dbName, docId).then(function(){ // revisions is updated with the new Rev.
+            return dbPutAttachment(dbName, docId, attachmentName, data, mimeType);
         })
     );
 }
 
 /**************************************************************************************/
-function dbGetAttachment(db, docId, attachmentName){
-    showSpinner();
+function dbGetAttachment(dbName, docId, attachmentName){
+    if(showSpinner) showSpinner();
     return Promise.resolve(
-        db.getAttachment(docId, attachmentName).then(function(blob){
+        dbs[dbName].db.getAttachment(docId, attachmentName).then(function(blob){
             return blob;
         }).catch(function(e){
             console.error("dbGetAttachment: \t" + e);
@@ -269,17 +285,17 @@ function dbGetAttachment(db, docId, attachmentName){
 }
 
 /**************************************************************************************/
-function dbDeleteAttachment(db, docId, attachmentName){
-    showSave();
+function dbDeleteAttachment(dbName, docId, attachmentName){
+    if(showSave) showSave();
     return Promise.resolve(
-        dbGetDoc(db, docId).then(function(doc){ // Guarantee that it has the lastest rev, rather than trying to remove first. 
+        dbGetDoc(dbName, docId).then(function(doc){ // Guarantee that it has the lastest rev, rather than trying to remove first. 
             if(doc._attachments){ // Save the attachments without the one that is geing deleted.
               delete doc._attachments[attachmentName];
-              dbAttachments[doc._id] = doc._attachments;
+              dbs[dbName].attachments[docId] = doc._attachments;
             }
-            return db.removeAttachment(docId, attachmentName, dbRevisions[docId])  
+            return dbs[dbName].db.removeAttachment(docId, attachmentName, dbs[dbName].revisions[docId])  
         }).then(function(result){
-            if(result.ok) dbRevisions[result.id] = result.rev;
+            if(result.ok) dbs[dbName].revisions[docId] = result.rev;
             return {"ok": true};
         }).catch(function(e){
             console.error("dbDeleteAttachment: \t" + e);
@@ -291,20 +307,40 @@ function dbDeleteAttachment(db, docId, attachmentName){
 }
 
 /**************************************************************************************/
-function dbBulkCreateDoc(db, docs){  // meant to be used when initilizing database, and none of the douments currently exist. 
-    showSave();
-    // docs = {
-    //     _id
-    //     _attachments
-    //     docContent
-    // }
+/*  docs = [{
+        _id
+        _attachments
+        docContent
+}] */ 
+function dbBulkCreateDoc(dbName, docs){
+    if(showSave) showSave();
+
+    for(var i = 0; i < docs.length; i++){ // an attachment in docs can't start with _
+        var attachmentsClone = JSON.parse(JSON.stringify(docs[i]._attachments));
+        for(var orgName in attachmentsClone){
+            var attachmentName = orgName;
+            var nameChanged = false;
+            while(attachmentName.indexOf("_") == 0){ // Make sure that the file does not start with a _
+                nameChanged = true;
+                attachmentName = attachmentName.slice(1);
+                if(attachmentName == "") attachmentName = "attachment" + new Date().getTime();
+            }
+            if(nameChanged){
+                docs[i]._attachments[attachmentName] = docs[i]._attachments[orgName];
+                delete docs[i]._attachments[orgName];
+            }
+        }
+    }
+
     return Promise.resolve(
-        db.bulkDocs(docs).then(function(result){
+        dbs[dbName].db.bulkDocs(docs).then(function(result){ 
             for(var i = 0; i < result.length; i++){
-                if(result[i].ok) dbRevisions[result[i].id] = result[i].rev; // Save the rev.
+                var thisResultDoc = result[i];
+                if(thisResultDoc.ok) dbs[dbName].revisions[thisResultDoc.id] = thisResultDoc.rev; // Save the rev.
+
                 for(var j = 0; j < docs.length; j++){ // Save the attachments as well.
-                    if(docs[j]._id == result[i].id){
-                        dbAttachments[result[i].id] = docs[j]._attachments;
+                    if(docs[j]._id == thisResultDoc.id){
+                        dbs[dbName].attachments[thisResultDoc.id] = docs[j]._attachments;
                         break;
                     }
                 }
